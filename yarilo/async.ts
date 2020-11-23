@@ -54,7 +54,7 @@ export type Suspend = {
 }
 
 export interface AsyncContext extends Context {
-  // out: Publisher<any>
+  out: Publisher<any>
 }
 
 export function nativeAsync(pc: PC): Proc {
@@ -74,7 +74,7 @@ export function nativeAsync(pc: PC): Proc {
 
         if (!input) {
           return new Promise((resolve, reject) => {
-            out.write(impl.apply(ctx, values))
+            impl.apply(ctx, values)
             resolve()
           })
         } else {
@@ -101,8 +101,7 @@ function createModule() {
   return { 
 
     write(this: AsyncContext, value: string) {
-      //this.out.write(value)
-      return value
+      this.out.write(value)
     },
     
     pipe(this: Context, left: Suspend, right: Suspend): Suspend {
@@ -132,6 +131,8 @@ function createModule() {
       console.log('passthrough', value)
       return value
     }
+    
+
   }
 }
 
