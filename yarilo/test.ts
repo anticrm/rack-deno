@@ -197,3 +197,36 @@ Deno.test('should execute', async () => {
   assertEquals(data, 176)
 })
 
+Deno.test('should execute', async () => {
+  const x = parse('dbl: proc-async [] "" [out add in in] (write 88) | dbl')
+  const vm = boot()
+  vm.bind(x)
+  const suspend: Suspend = vm.exec(x)
+  let data: any
+  suspend.out.subscribe({
+    onNext(t: any) {
+      data = t
+    },
+    onSubscribe(s: Subscription): void {},
+    onError(e: Error): void {},
+    onComplete(): void {}
+  })
+  const res = await suspend.resume()
+  assertEquals(data, 176)
+})
+
+Deno.test('should execute', () => {
+  const x = parse('module [] [dbl: proc [x] [add x x]]')
+  const vm = boot()
+  vm.bind(x)
+  const result = vm.exec(x)
+  assertEquals(typeof result.dbl === 'function', true)
+})
+
+Deno.test('should execute', () => {
+  const x = parse('m: module [] [dbl: proc [x] [add x x]] m/dbl 55')
+  const vm = boot()
+  vm.bind(x)
+  const result = vm.exec(x)
+  assertEquals(result, 110)
+})

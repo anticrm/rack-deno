@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-import { Context, Code, CodeItem, Word, Bound, bind, PC, VM } from './vm.ts'
+import { Context, Code, CodeItem, Word, Bound, bind, PC, VM, bindDictionary } from './vm.ts'
 import { parse } from './parse.ts'
 // import { Writable, Readable, pipeline, PassThrough } from 'stream'
 
@@ -70,78 +70,40 @@ function either(this: Context, cond: any, ifTrue: Code, ifFalse: Code) {
   return this.vm.exec(cond ? ifTrue : ifFalse)
 }
 
-// S T R E A M S
-
-// function pipe(this: Context, left: Suspend, right: Suspend): Suspend {
-//   if (!left.out)
-//     throw new Error('no output from left')
-//   const pass = new PassThrough()
-//   pipeline(left.out, pass, (err: Error | null) => {
-//   })
-
-//   return {
-//     resume: async (input?: Readable) => Promise.all([left.resume(input), right.resume(pass)]) as unknown as Promise<void>,
-//     out: right.out,
-//   }  
-// }
-
-// async function write(this: Context, value: string) {
-//   console.log('WRITING')
-//   this.out.write(value)
-// }
-
-// async function passthrough(this: Context) {
-//   for await (const chunk of this.input) {
-//     console.log('writing', chunk)
-//     this.out.write(chunk)
-//   }
-//   console.log('PASSED')
-// }
-
-// new-video: proc [] [
-//   id: nanoid
-//   job [get-video id] | [transcode] | [save-video id]
-//   id
-// ]
-
-// video-chunk: proc [id chunk final] [
-//   in | ram/wset join id ['.' chunk]
-//   if final [
-//     ram/set join id ['.' chunk ".final"] chunk
-//   ]
-// ]
-
-// get-video: proc [id /local chunk] [
-//   chunk: 0
-//   until [
-//     ram/wget join id ["." chunk] | out
-//     chunk: add chunk 1
-//     ram/get join id ["." chunk ".final"]
-//   ]  
-// ]
-
 const core = { 
   add, sub, mul, proc, gt, eq, either,
-  // write, passthrough, pipe
+  import (url: string) {
+    console.log('import ' + url)
+  },
+  module (this: Context, desc: Code, code: Code) {
+    this.vm.bind(code)  
+    const dict = {}
+    bindDictionary(code, dict)
+    this.vm.exec(code)
+    return dict
+  }
 }
 
 const coreY = `
-add: native [x y] core/add
-sub: native [x y] core/sub
-mul: native [x y] core/mul
+add: native [x y] :core/add
+sub: native [x y] :core/sub
+mul: native [x y] :core/mul
 
-gt: native [x y] core/gt
-eq: native [x y] core/eq
+gt: native [x y] :core/gt
+eq: native [x y] :core/eq
 
-+: native-infix [x y] core/add
--: native-infix [x y] core/sub
-*: native-infix [x y] core/mul
++: native-infix [x y] :core/add
+-: native-infix [x y] :core/sub
+*: native-infix [x y] :core/mul
 
->: native-infix [x y] core/gt
-=: native-infix [x y] core/eq
+>: native-infix [x y] :core/gt
+=: native-infix [x y] :core/eq
 
-proc: native [params code] core/proc
-either: native [cond ifTrue ifFalse] core/either
+proc: native [params code] :core/proc
+either: native [cond ifTrue ifFalse] :core/either
+
+module: native [desc code] :core/module
+import: native [url] :core/import
 `
 
 export default function (vm: VM) {

@@ -75,11 +75,13 @@ export class Word extends Executable {
 
 export class Path extends Executable {
   readonly path: string[]
+  readonly kind: WordKind
   bound?: Bound
 
-  constructor(path: string[]) {
+  constructor(kind: WordKind, path: string[]) {
     super()
     this.path = path
+    this.kind = kind
   }
 
   bind(f: BindFactory) {
@@ -90,7 +92,14 @@ export class Path extends Executable {
   exec(pc: PC): any {
     if (!this.bound)
       throw new Error('path not bound')
-    return this.path.slice(1).reduce((acc, val) => acc[val], this.bound.get(this.path[0]))
+    switch (this.kind) {
+      case WordKind.GetWord:
+        return this.path.slice(1).reduce((acc, val) => acc[val], this.bound.get(this.path[0]))
+      default:
+        // throw new Error('should not be here ' + this.path.toString())
+        const result = this.path.slice(1).reduce((acc, val) => acc[val], this.bound.get(this.path[0]))
+        return typeof result === 'function' ? result(pc) : result
+    }
   }
 }
 
@@ -129,17 +138,42 @@ export function bind(code: Code, boundFactory: (sym: string) => Bound | undefine
   }
 }
 
+function getSetWords(code: Code): { [key: string]: string } {
+  let result: { [key: string]: string } = {}
+  code.forEach ((item: any) => {
+    if (Array.isArray(item)) {
+      result = { ...result, ...getSetWords(item) }
+    } else if (item.kind && item.kind === WordKind.SetWord) {
+      result[item.sym] = item.sym
+    }
+  })
+  return result
+}
+
+export function bindDictionary(code: Code, dict: { [key: string]: any }) {
+  const setWords = getSetWords(code)
+
+  bind(code, (sym: string) => {
+    if (setWords[sym]) {
+      return { 
+        get: (sym: string) => dict[sym],
+        set: (sym: string, value: any) => dict[sym] = value
+      }  
+    }
+  })
+}
+
 export class VM {
   dictionary: Dict = {}
   stack: any[] = []
   result: any
 
   bind(code: Code) {
-    bind(code, () => {
+    bind(code, (sym: string) => {
       return { 
         get: (sym: string) => this.dictionary[sym],
         set: (sym: string, value: any) => this.dictionary[sym] = value
-      }
+      }  
     })
   }
 

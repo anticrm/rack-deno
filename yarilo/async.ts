@@ -213,10 +213,11 @@ function createModule() {
 }
 
 const Y = `
-proc-async: native [params mimeType code] async/procAsync
-pipe: native [left right] async/pipe
-write: native-async [value] "application/octet-stream" async/write
-passthrough: native-async [value] "application/octet-stream" async/passthrough
+proc-async: native [params mimeType code] :async/procAsync
+pipe: native [left right] :async/pipe
+write: native-async [value] "application/octet-stream" :async/write
+passthrough: native-async [value] "application/octet-stream" :async/passthrough
+|: native-infix [left right] :async/pipe
 `
 
 export default function (vm: VM) {

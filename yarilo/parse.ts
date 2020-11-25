@@ -108,7 +108,7 @@ export function parse(s: string, pos: number = 0): any[] {
           kind = WordKind.SetWord
           i++
         }
-         else if (s.charAt(i) === '/') {
+        else if (s.charAt(i) === '/') {
           const path = []
           path.push(ident)
           i++
@@ -118,7 +118,7 @@ export function parse(s: string, pos: number = 0): any[] {
             if (s.charAt(i) !== '/') break
             else i++
           }
-          result.push(new Path(path))
+          result.push(new Path(kind, path))
           break
         }
 

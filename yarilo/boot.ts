@@ -18,9 +18,6 @@ import coreModule from "./core.ts"
 
 import asyncModule, { nativeAsync } from './async.ts'
 
-// import { ReadableStream } from "https://denopkg.com/keroxp/deno-streams/readable_stream.ts"
-// import { TransformStream } from "https://denopkg.com/keroxp/deno-streams/transform_stream.ts"
-
 function native(pc: PC): Proc {
   const params = pc.next() as Code
   const impl = pc.next() as Function
@@ -30,40 +27,6 @@ function native(pc: PC): Proc {
     return impl.apply(pc, values)
   }
 }
-
-// function nativeAsync(pc: PC): Proc {
-//   const params = pc.next() as Code
-//   const mimeType = pc.next() as string
-//   const impl = pc.next() as Function
-
-//   return (pc: PC): any => {
-//     const values = params.map(param => pc.next())
-//     const objectMode = mimeType === 'application/json'
-//     const out = new TransformStream({ objectMode })
-//     return { 
-//       resume: (input?: ReadableStream): Promise<void> => {
-//         const ctx = {
-//           vm: pc.vm,
-//           out,
-//           input
-//         }
-//         return new Promise((resolve, reject) => {
-//           impl.apply(ctx, values)
-//             .then(() => {
-//               out.end()
-//               resolve()
-//             })
-//             .catch((err: Error) => {
-//               out.end()
-//               reject(err)
-//             })
-//         })
-//       },
-//       out,
-//       mimeType
-//     }
-//   }
-// }
 
 function nativeInfix(pc: PC) {
   const params = pc.next() as Code
@@ -83,4 +46,7 @@ export function boot(): VM {
   coreModule(vm)
   asyncModule(vm)
   return vm
+}
+
+export function importModule(url: string) {
 }
