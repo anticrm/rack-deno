@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-import { VM, PC, Proc, Code, Context } from "./vm.ts"
+import { VM, PC, Proc, Code, Context, bind, CodeItem, Word, Bound } from "./vm.ts"
 import { parse } from './parse.ts'
 
 export class Publisher<T> {
@@ -22,7 +22,7 @@ export class Publisher<T> {
 
   subscribe(s: Subscriber<T>): void {
     this.subscriber = s
-    console.log('flushing ' + this.queue.length + ' elements')
+    // console.log('flushing ' + this.queue.length + ' elements')
     this.queue.forEach(item => s.onNext(item))
     this.queue = []
   }
@@ -98,8 +98,86 @@ export function nativeAsync(pc: PC): Proc {
 }
 
 function createModule() {
-  return { 
+  return {
 
+    procAsync(this: Context, params: Code, mimeType: string, code: Code): any {
+
+      const offset: { [key: string]: number } = {}
+      params.forEach((param: CodeItem, index: number) => {
+        const word = param as Word
+        offset[word.sym] = index - params.length
+      })
+    
+      const vm = this.vm
+    
+      bind(code, (sym: string): Bound | undefined => {
+        if (offset[sym]) {
+          return { 
+            get: (sym: string): any => vm.stack[vm.stack.length + offset[sym]],
+            set: (sym: string, value: any) => vm.stack[vm.stack.length + offset[sym]] = value
+          }  
+        }
+      })
+
+      const impl = (pc: PC): any => {
+        params.forEach(item => {
+          vm.stack.push(pc.next())      
+        })
+        const x = vm.exec(code)
+        vm.stack.length = vm.stack.length - params.length
+        return x
+      }      
+
+      return (pc: PC): any => {
+        const out = new Publisher()
+        let inputValueHolder: any
+        bind(code, (sym: string): Bound | undefined => {
+          if (sym === 'in') {
+            return {
+              get: (sym: string): any => inputValueHolder,
+              set: (sym: string, value: any) => { throw new Error('in is read only') }
+            }                
+          }
+          if (sym === 'out') {
+            return {
+              get: (sym: string): any => (pc: PC): any => out.write(pc.next()),
+              set: (sym: string, value: any) => { throw new Error('out is read only') }
+            }
+          }
+        })
+        return { 
+          resume: (input?: Publisher<any>): Promise<void> => {
+            if (!input) {
+              return new Promise((resolve, reject) => {
+                impl(pc)
+                resolve()
+              })
+            } else {
+              return new Promise((resolve, reject) => {
+                input.subscribe({
+                  onSubscribe(s: Subscription): void {},
+                  onNext(t: any): void {
+                    inputValueHolder = t
+                    resolve(impl(pc))
+                  },
+                  onError(e: Error): void {},
+                  onComplete(): void { resolve() },          
+                })
+              })
+            }
+          },
+          out,
+          mimeType
+        }
+      }
+    },
+
+    out(pc: PC): any {
+      const data = pc.next()
+      const ctx = pc as unknown as AsyncContext
+      ctx.out.write(data)
+    },
+    
     write(this: AsyncContext, value: string) {
       this.out.write(value)
     },
@@ -110,7 +188,6 @@ function createModule() {
       const sub: Subscriber<any> = {
         onSubscribe(s: Subscription): void {},
         onNext(t: any): void {
-          console.log('piped ', t)
           pub.write(t)
         },
         onError(e: Error): void {},
@@ -128,7 +205,6 @@ function createModule() {
     },
     
     passthrough(this: Context, value: any) {
-      console.log('passthrough', value)
       return value
     }
     
@@ -137,6 +213,7 @@ function createModule() {
 }
 
 const Y = `
+proc-async: native [params mimeType code] async/procAsync
 pipe: native [left right] async/pipe
 write: native-async [value] "application/octet-stream" async/write
 passthrough: native-async [value] "application/octet-stream" async/passthrough

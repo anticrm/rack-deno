@@ -179,3 +179,21 @@ Deno.test('should execute', async () => {
   const res = await suspend.resume()
 })
 
+Deno.test('should execute', async () => {
+  const x = parse('dbl: proc-async [] "" [out add in in] pipe write 88 dbl')
+  const vm = boot()
+  vm.bind(x)
+  const suspend: Suspend = vm.exec(x)
+  let data: any
+  suspend.out.subscribe({
+    onNext(t: any) {
+      data = t
+    },
+    onSubscribe(s: Subscription): void {},
+    onError(e: Error): void {},
+    onComplete(): void {}
+  })
+  const res = await suspend.resume()
+  assertEquals(data, 176)
+})
+
