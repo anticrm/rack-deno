@@ -15,6 +15,7 @@
 
 import { Context, Code, CodeItem, Word, Bound, bind, PC, VM, bindDictionary } from './vm.ts'
 import { parse } from './parse.ts'
+import { bgMagenta } from "https://deno.land/std@0.78.0/fmt/colors.ts"
 // import { Writable, Readable, pipeline, PassThrough } from 'stream'
 
 export function add (x: any, y: any): any {
@@ -70,10 +71,19 @@ function either(this: Context, cond: any, ifTrue: Code, ifFalse: Code) {
   return this.vm.exec(cond ? ifTrue : ifFalse)
 }
 
+export function importModule(vm: VM, url: URL) {
+  console.log('importing from ' + url.toString())
+  vm.url = url
+  const buf = Deno.readFileSync(url)
+  const code = parse(new TextDecoder().decode(buf))
+  vm.bind(code)
+  return vm.exec(code)
+}
+
 const core = { 
   add, sub, mul, proc, gt, eq, either,
-  import (url: string) {
-    console.log('import ' + url)
+  import (this: Context, url: URL) {
+    return importModule(this.vm, url)
   },
   module (this: Context, desc: Code, code: Code) {
     this.vm.bind(code)  

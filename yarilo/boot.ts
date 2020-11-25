@@ -17,6 +17,7 @@ import { PC, Code, Proc, VM } from "./vm.ts"
 import coreModule from "./core.ts"
 
 import asyncModule, { nativeAsync } from './async.ts'
+import { parse } from "./parse.ts"
 
 function native(pc: PC): Proc {
   const params = pc.next() as Code
@@ -46,7 +47,4 @@ export function boot(): VM {
   coreModule(vm)
   asyncModule(vm)
   return vm
-}
-
-export function importModule(url: string) {
 }

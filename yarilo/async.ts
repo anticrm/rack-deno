@@ -172,18 +172,28 @@ function createModule() {
       }
     },
 
-    out(pc: PC): any {
-      const data = pc.next()
-      const ctx = pc as unknown as AsyncContext
-      ctx.out.write(data)
+    await(this: Context, proc: Suspend): any {
+      proc.out.subscribe({
+        onSubscribe(s: Subscription): void {},
+        onNext(t: any): void {
+          console.log(t)
+        },
+        onError(e: Error): void {},
+        onComplete(): void {},
+      })
     },
-    
+
+    async importJsModule(this: AsyncContext, url: string) {
+      const u = new URL(url, this.vm.url)
+      console.log('importing js from ' + u.toString())
+      this.out.write(await import(u.toString()))
+    },
+
     write(this: AsyncContext, value: string) {
       this.out.write(value)
     },
     
-    pipe(this: Context, left: Suspend, right: Suspend): Suspend {
-    
+    pipe(this: Context, left: Suspend, right: Suspend): Suspend {    
       const pub = new Publisher<any>()
       const sub: Subscriber<any> = {
         onSubscribe(s: Subscription): void {},
@@ -207,7 +217,6 @@ function createModule() {
     passthrough(this: Context, value: any) {
       return value
     }
-    
 
   }
 }
@@ -216,6 +225,7 @@ const Y = `
 proc-async: native [params mimeType code] :async/procAsync
 pipe: native [left right] :async/pipe
 write: native-async [value] "application/octet-stream" :async/write
+import-js-module: native-async [url] "application-json" :async/importJsModule
 passthrough: native-async [value] "application/octet-stream" :async/passthrough
 |: native-infix [left right] :async/pipe
 `

@@ -167,6 +167,7 @@ export class VM {
   dictionary: Dict = {}
   stack: any[] = []
   result: any
+  url?: URL
 
   bind(code: Code) {
     bind(code, (sym: string) => {

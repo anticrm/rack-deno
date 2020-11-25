@@ -13,25 +13,4 @@
 // limitations under the License.
 //
 
-import { VM } from '../yarilo/vm.ts'
-import { parse } from '../yarilo/parse.ts'
-import { boot } from '../yarilo/boot.ts'
-import { importModule } from '../yarilo/core.ts'
-
-export class Node {
-  private vm!: VM
-  private deployments: { [key: string]: VM }  = {}
-
-  boot () {
-    console.log('starting node boot sequence...')
-    console.log('creating yarilo vm...')
-    this.vm = boot()
-    this.vm.dictionary['mem'] = importModule(this.vm, new URL('../mem/mod.y', import.meta.url))
-  }
-
-  exec(code: string): any {
-    const parsed = parse(code)
-    this.vm.bind(parsed)
-    return this.vm.exec(parsed)
-  }
-}
+export const x = 42
