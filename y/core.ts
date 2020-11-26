@@ -17,7 +17,7 @@ import { VM, Context, Code, Proc, CodeItem, Word, Bound, bind, bindDictionary, P
 import { parse } from './parse.ts'
 
 export async function importModule(vm: VM, url: URL): Promise<any> {
-  console.log('importing from ' + url.toString())
+  console.log('loading module ' + url.toString() + '...')
   vm.url = url
   const buf = await Deno.readFile(url)
   const code = parse(new TextDecoder().decode(buf))
@@ -91,8 +91,11 @@ function createModule() {
 
     async importJsModule (this: Context, url: string): Promise<any> {
       const u = new URL(url, this.vm.url)
-      //console.log('importing js from ' + u.toString())
-      return import(u.toString())
+      const mod = await import(u.toString())
+      if (mod['run']) {
+        mod.run(this.vm)
+      }
+      return mod
     },
 
     async module (this: Context, desc: Code, code: Code): Promise<any> {
@@ -101,6 +104,10 @@ function createModule() {
       bindDictionary(code, dict)
       await this.vm.exec(code)
       return dict
+    },
+
+    async throw (this: Context, message: string): Promise<any> {
+      throw new Error(message)
     }
     
   }
@@ -118,6 +125,8 @@ proc: native [params code] :core/proc
 either: native [cond ifTrue ifFalse] :core/either
 module: native [desc code] :core/module
 import-js-module: native [url] :core/importJsModule
+
+throw: native [message] :core/throw
 `
 
 export default async function (vm: VM) {

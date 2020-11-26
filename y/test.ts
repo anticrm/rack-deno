@@ -14,11 +14,12 @@
 //
 
 import {
-  assertEquals
+  assertEquals, assertThrowsAsync
 } from "https://deno.land/std/testing/asserts.ts"
 
 import { boot } from './boot.ts'
 import { parse } from './parse.ts'
+import { importModule } from './core.ts'
 // import { VM, PC } from './vm.ts'
 // import { Suspend, Publisher, Subscription } from './async.ts'
 
@@ -124,3 +125,16 @@ Deno.test('should execute', async () => {
   const result = await vm.exec(x)
   assertEquals(result.test, 5)
 })
+
+Deno.test('should execute', async () => {
+  const x = parse('add 5 5 throw "message"')
+  const vm = await boot()
+  vm.bind(x)
+  assertThrowsAsync(() => vm.exec(x))
+})
+
+// Deno.test('should execute', async () => {
+//   const vm = await boot()
+//   const x = await importModule(vm, new URL('../http/mod.y', import.meta.url))
+// })
+

@@ -17,22 +17,26 @@ import { readLines } from "https://deno.land/std/io/mod.ts"
 import { Node } from './node.ts'
 
 async function main() {
-  console.log('rackOS v0.1.0 (c) copyright 2020 Anticrm Project Contributors. All rights reserved.')
-  const node = new Node()
-  node.boot()
-  const cb = (err: Error | null, res: any) => { 
-    if (err) {
-      console.log('error: ', err)
-    } else {
-      console.log(res)
+  try {
+    console.log('rackOS v0.1.0 (c) copyright 2020 Anticrm Project Contributors. All rights reserved.')
+    const node = new Node()
+    await node.boot()
+    const cb = (err: Error | null, res: any) => { 
+      if (err) {
+        console.log('error: ', err)
+      } else {
+        console.log(res)
+      }
     }
-  }
-  while(true) {
-    await Deno.stdout.write(new TextEncoder().encode('rackOS> '))
-    const input = await readLines(Deno.stdin).next()
-    const code = input.value
-    const result = await node.exec(code)
-    cb (null, result)
+    while(true) {
+      await Deno.stdout.write(new TextEncoder().encode('rackOS> '))
+      const input = await readLines(Deno.stdin).next()
+      const code = input.value
+      const result = await node.exec(code)
+      cb (null, result)
+    }
+  } catch (err) {
+    console.log('error: ', err)
   }
 }
 

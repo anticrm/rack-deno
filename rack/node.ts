@@ -28,6 +28,7 @@ export class Node {
     this.vm = await boot()
     // console.log('importing mem module...')
     this.vm.dictionary['mem'] = await importModule(this.vm, new URL('../mem/mod.y', import.meta.url))
+    this.vm.dictionary['http'] = await importModule(this.vm, new URL('../http/mod.y', import.meta.url))
   }
 
   exec(code: string): any {
