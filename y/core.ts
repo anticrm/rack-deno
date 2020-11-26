@@ -13,8 +13,17 @@
 // limitations under the License.
 //
 
-import { VM, Context, Code, Proc, CodeItem, Word, Bound, bind, PC } from './vm.ts'
+import { VM, Context, Code, Proc, CodeItem, Word, Bound, bind, bindDictionary, PC } from './vm.ts'
 import { parse } from './parse.ts'
+
+export async function importModule(vm: VM, url: URL): Promise<any> {
+  console.log('importing from ' + url.toString())
+  vm.url = url
+  const buf = await Deno.readFile(url)
+  const code = parse(new TextDecoder().decode(buf))
+  vm.bind(code)
+  return vm.exec(code)
+}
 
 function createModule() {
   return { 
@@ -78,6 +87,20 @@ function createModule() {
         vm.stack.length = vm.stack.length - params.length
         return x
       }
+    },
+
+    async importJsModule (this: Context, url: string): Promise<any> {
+      const u = new URL(url, this.vm.url)
+      //console.log('importing js from ' + u.toString())
+      return import(u.toString())
+    },
+
+    async module (this: Context, desc: Code, code: Code): Promise<any> {
+      //this.vm.bind(code)  
+      const dict = {}
+      bindDictionary(code, dict)
+      await this.vm.exec(code)
+      return dict
     }
     
   }
@@ -93,6 +116,8 @@ eq: native [x y] :core/eq
 
 proc: native [params code] :core/proc
 either: native [cond ifTrue ifFalse] :core/either
+module: native [desc code] :core/module
+import-js-module: native [url] :core/importJsModule
 `
 
 export default async function (vm: VM) {

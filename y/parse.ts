@@ -87,7 +87,7 @@ export function parse(s: string, pos: number = 0): any[] {
         let str = ""
         while (++i < s.length && s.charAt(i) !== '"')
           str += s.charAt(i) 
-        result.push(str)
+        result.push(new Const(str))
         i++
         break
       default:

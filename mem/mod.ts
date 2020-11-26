@@ -13,4 +13,22 @@
 // limitations under the License.
 //
 
-export const x = 42
+import { connect, Redis } from "https://deno.land/x/redis/mod.ts"
+import { Context } from '../y/vm.ts'
+
+let redis = await connect({
+  hostname: "127.0.0.1",
+  port: 6379
+})
+
+function getClient(): Redis {
+  return redis
+}
+
+export async function set(this: Context, key: string, value: string) {
+  return getClient().set(key, value)
+}
+
+export async function get(this: Context, key: string) {
+  return getClient().get(key)
+}

@@ -15,7 +15,6 @@
 
 import { readLines } from "https://deno.land/std/io/mod.ts"
 import { Node } from './node.ts'
-import { Subscription } from '../yarilo/async.ts'
 
 async function main() {
   console.log('rackOS v0.1.0 (c) copyright 2020 Anticrm Project Contributors. All rights reserved.')
@@ -32,25 +31,8 @@ async function main() {
     await Deno.stdout.write(new TextEncoder().encode('rackOS> '))
     const input = await readLines(Deno.stdin).next()
     const code = input.value
-    const result = node.exec(code)
-    if (result && result.resume) {
-      let promiseResult
-      result.resume()
-        .then(async (res: any) => {
-          result.out.subscribe({
-            onNext(t: any) {
-              console.log(t)
-            },
-            onSubscribe(s: Subscription): void {},
-            onError(e: Error): void {},
-            onComplete(): void {}
-          })        
-        })
-        .catch((err: Error) => { cb(err, undefined) })
-  
-    } else {
-      cb (null, result)
-    }
+    const result = await node.exec(code)
+    cb (null, result)
   }
 }
 

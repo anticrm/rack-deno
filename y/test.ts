@@ -29,7 +29,7 @@ Deno.test('should parse', () => {
 
 Deno.test('should parse', () => {
   const x = parse('add "1" "2"')
-  assertEquals(x[1], '1')
+  assertEquals(x[1].val, '1')
 })
 
 Deno.test('should parse', () => {
@@ -86,15 +86,41 @@ Deno.test('should execute', async () => {
 })
 
 Deno.test('should execute', async () => {
-  const x = parse('fib: proc [n] [either gt n 1 [add fib sub n 2 fib sub n 1] [n]] fib 40')
+  const x = parse('fib: proc [n] [either gt n 1 [add fib sub n 2 fib sub n 1] [n]] fib 20')
   const vm = await boot()
   vm.bind(x)
   assertEquals(await vm.exec(x), 6765)
 })
 
 Deno.test('should execute', async () => {
-  const x = parse('fib: proc [n] [either gt n 1 [add fib sub n 2 fib sub n 1] [n]] fib 40')
+  const x = parse('fib: proc [n] [either gt n 1 [add fib sub n 2 fib sub n 1] [n]] fib 20')
   const vm = await boot()
   vm.bind(x)
   assertEquals(await vm.exec(x), 6765)
+})
+
+Deno.test('should execute', async () => {
+  const x = parse('module [] [test: 5]')
+  const vm = await boot()
+  vm.bind(x)
+  const result = await vm.exec(x)
+  assertEquals(result.test, 5)
+})
+
+Deno.test('should execute', async () => {
+  const x = parse('import-js-module "' + import.meta.url + '"')
+  const vm = await boot()
+  vm.bind(x)
+  const result = await vm.exec(x)
+  assertEquals(result.x, 42)
+})
+
+export const x = 42
+
+Deno.test('should execute', async () => {
+  const x = parse('module [] [import-js-module "' + import.meta.url + '" test: 5]')
+  const vm = await boot()
+  vm.bind(x)
+  const result = await vm.exec(x)
+  assertEquals(result.test, 5)
 })

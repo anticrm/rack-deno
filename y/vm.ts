@@ -161,6 +161,31 @@ export function bind(code: Code, boundFactory: (sym: string) => Bound | undefine
   code.forEach(item => {if (!item.bind) { console.log(item); throw new Error('no bind') } else { return item.bind(boundFactory) }})
 }
 
+function getSetWords(code: Code): { [key: string]: string } {
+  let result: { [key: string]: string } = {}
+  code.forEach ((item: any) => {
+    if (Array.isArray(item)) {
+      result = { ...result, ...getSetWords(item) }
+    } else if (item.kind && item.kind === WordKind.Set) {
+      result[item.sym] = item.sym
+    }
+  })
+  return result
+}
+
+export function bindDictionary(code: Code, dict: { [key: string]: any }) {
+  const setWords = getSetWords(code)
+
+  bind(code, (sym: string) => {
+    if (setWords[sym]) {
+      return { 
+        get: (sym: string) => dict[sym],
+        set: (sym: string, value: any) => dict[sym] = value
+      }  
+    }
+  })
+}
+
 export class VM {
   dictionary: Dict = {}
   stack: any[] = []
@@ -176,8 +201,8 @@ export class VM {
     })
   }
 
-  async exec(code: Code): Promise<any> {
-    return new PC(this, code).exec()
+  async exec(code: Code, trace = false): Promise<any> {
+    return new PC(this, code).exec(trace)
   }
 
 }
@@ -194,10 +219,10 @@ export class PC {
   }
 
   nextNoInfix(): Promise<any> {
-    if (!this.code[this.pc]) {
-      console.log(this.code, this.pc)
-      throw new Error('no exec')
-    }
+    // if (!this.code[this.pc]) {
+    //   console.log(this.code, this.pc)
+    //   throw new Error('no exec')
+    // }
     const result = this.code[this.pc++].exec(this)    
     this.vm.result = result
     return result
@@ -217,10 +242,16 @@ export class PC {
     return result
   }
 
-  async exec(): Promise<any> {
+  async exec(trace = false): Promise<any> {
+    if (trace) {
+      console.log('exec: ', this.code)
+    }
     let result
     while (this.pc < this.code.length) {
       result = await this.next()
+      if (trace) {
+        console.log('> ', result)
+      }
     }
     return result
   }

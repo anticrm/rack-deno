@@ -1,5 +1,6 @@
 
 module [] [
-  await pipe import-js-module "./mod.ts" set 'impl
-  set: native-async [key] "application/octet-stream" :impl/set 
+  impl: import-js-module "./mod.ts"
+  set: native [key value] :impl/set
+  get: native [key] :impl/get
 ]
