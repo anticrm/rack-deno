@@ -13,29 +13,67 @@
 // limitations under the License.
 //
 
-import { Context, Proc, VM, PC, Code } from '../y/vm.ts'
-import { boot } from '../y/boot.ts'
-import { serve } from "https://deno.land/std@0.79.0/http/server.ts"
+import { Context, Proc, VM, PC, Code, Refinement, Word, Const } from '../y/vm.ts'
+import { serve, ServerRequest } from "https://deno.land/std/http/server.ts"
 
-const procs = new Map<string, Proc>()
+const procs = new Map<string, (request: ServerRequest) => Promise<any>>()
+const base = "http://localhost:8086/"
 
-export async function run(vm: VM) {
+export async function run() {
   console.log('starting http server...')
   const server = serve({ hostname: "0.0.0.0", port: 8086 })
 
-  for await (const request of server) {
-    const proc = procs.get(request.url)
-    if (proc) {
-      const code: Code = []
-      const pc = new PC(vm, code)
-      const result = await proc(pc)
-      request.respond({ status: 200, body: result });
-    } else {
-      request.respond({ status: 404 });
+  try {
+    for await (const request of server) {
+      const proc = procs.get(new URL(request.url, base).pathname)
+      if (proc) {
+        const result = await proc(request)
+        request.respond({ status: 200, body: result })
+      } else {
+        request.respond({ status: 404 })
+      }
     }
+  } catch (err) {
+    console.log('http error: ', err)
   }
 }
 
-export async function expose(this: Context, proc: Proc, path: string) {
-  procs.set(path, proc)
+enum Extract {
+  Unknown = 0,
+  Query
+}
+
+const extractFactory = [
+  (ident: string) => { throw new Error('unknown param extraction kind')},
+  (ident: string) => (request: ServerRequest) => {
+    // console.log('url: ', request.url)
+    return new Const(new URL(request.url, base).searchParams.get(ident))
+  }
+]
+
+export async function expose(this: Context, proc: Proc, path: string, params: Code) {
+
+  let kind = Extract.Unknown
+  const extractors: any[] = []
+
+  params.forEach(param => {
+    if (param instanceof Refinement) {
+      if (param.ident === 'query') {
+        kind = Extract.Query
+      } else {
+        throw new Error('unsupported param kind: ' + param.ident)
+      }
+    } else if (param instanceof Word) {
+      extractors.push(extractFactory[kind](param.sym))
+    } else throw new Error('unsupported param kind')
+  })
+
+  const launch = async (request: ServerRequest): Promise<any> => {
+    const code = extractors.map(extractor => extractor(request))
+    // console.log('code: ', code)
+    const pc = new PC(this.vm, code)
+    return proc(pc)
+  }
+
+  procs.set(path, launch)
 }

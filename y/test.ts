@@ -20,6 +20,7 @@ import {
 import { boot } from './boot.ts'
 import { parse } from './parse.ts'
 import { importModule } from './core.ts'
+import { Refinement } from "./vm.ts"
 // import { VM, PC } from './vm.ts'
 // import { Suspend, Publisher, Subscription } from './async.ts'
 
@@ -35,6 +36,12 @@ Deno.test('should parse', () => {
 
 Deno.test('should parse', () => {
   const x = parse('add 1 core/data')
+})
+
+Deno.test('should parse', () => {
+  const x = parse('proc /data')
+  assertEquals(x[1] instanceof Refinement, true)
+  assertEquals(x[1].ident, 'data')
 })
 
 Deno.test('should execute', async () => {

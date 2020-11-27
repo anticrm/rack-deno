@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-import { Word, WordKind, Path, Brackets, VM, Const, Block } from './vm.ts'
+import { Word, WordKind, Path, Brackets, VM, Const, Block, Refinement } from './vm.ts'
 
 const zero = '0'.charCodeAt(0)
 const nine = '9'.charCodeAt(0)
@@ -89,6 +89,11 @@ export function parse(s: string, pos: number = 0): any[] {
           str += s.charAt(i) 
         result.push(new Const(str))
         i++
+        break
+      case '/':
+        i++
+        const id = readIdent()
+        result.push(new Refinement(id))
         break
       default:
         let kind = WordKind.Norm

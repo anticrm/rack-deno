@@ -157,6 +157,24 @@ export class Block extends CodeItem {
 
 }
 
+export class Refinement extends CodeItem {
+  readonly ident: string
+
+  constructor (ident: string) {
+    super()
+    this.ident = ident
+  }
+
+  bind(f: BindFactory) {
+  }
+
+  async exec (pc: PC): Promise<any> {
+    throw new Error('refinement execution')
+  }
+
+}
+
+
 export function bind(code: Code, boundFactory: (sym: string) => Bound | undefined) {
   code.forEach(item => {if (!item.bind) { console.log(item); throw new Error('no bind') } else { return item.bind(boundFactory) }})
 }
