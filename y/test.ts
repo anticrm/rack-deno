@@ -140,6 +140,14 @@ Deno.test('should execute', async () => {
   assertThrowsAsync(() => vm.exec(x))
 })
 
+Deno.test('should execute', async () => {
+  const x = parse('x: 10 p: proc [/local x] [x: 5 x] add p x')
+  const vm = await boot()
+  vm.bind(x)
+  const result = await vm.exec(x)
+  assertEquals(result, 15)
+})
+
 // Deno.test('should execute', async () => {
 //   const vm = await boot()
 //   const x = await importModule(vm, new URL('../http/mod.y', import.meta.url))

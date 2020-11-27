@@ -13,8 +13,9 @@
 // limitations under the License.
 //
 
-import { VM, Context, Code, Proc, CodeItem, Word, Bound, bind, bindDictionary, PC } from './vm.ts'
+import { VM, Context, Code, Proc, CodeItem, Word, Bound, bind, bindDictionary, PC, Refinement } from './vm.ts'
 import { parse } from './parse.ts'
+import { Publisher } from './async.ts'
 
 export async function importModule(vm: VM, url: URL): Promise<any> {
   console.log('loading module ' + url.toString() + '...')
@@ -55,38 +56,99 @@ function createModule() {
     
     async proc (this: Context, params: Code, code: Code): Promise<Proc> {
 
-      const offset: { [key: string]: number } = {}
-      params.forEach((param: CodeItem, index: number) => {
-        const word = param as Word
-        offset[word.sym] = index - params.length
-      })
-    
+      const offsets: { [key: string]: number } = {}
+
+      // count stack parameters
+      let stackParams = 0
+      let stackSize = 0
+      let kind = 'default'
+
+      let pos = 0
+      let stream = false
+
+      for (let i = 0; i < params.length; i++) {
+        if (params[i] instanceof Refinement) {
+          kind = (params[i] as Refinement).ident
+        } else switch (kind) {
+          case 'default':
+            stackParams++
+          case 'local':
+            stackSize++
+            const word = params[i] as Word
+            offsets[word.sym] = pos++
+            break
+          case 'out':
+            stream = true
+            break
+          default: 
+            throw new Error('unknown kind')
+        }
+      }
+
+      for (const sym in offsets) {
+        const ofs = offsets[sym]
+        offsets[sym] = ofs - stackSize
+      }
+
       const vm = this.vm
     
       bind(code, (sym: string): Bound | undefined => {
-        if (offset[sym]) {
+        if (offsets[sym]) {
           return { 
-            get: (sym: string): any => vm.stack[vm.stack.length + offset[sym]],
-            set: (sym: string, value: any) => vm.stack[vm.stack.length + offset[sym]] = value
+            get: (sym: string): any => vm.stack[vm.stack.length + offsets[sym]],
+            set: (sym: string, value: any) => vm.stack[vm.stack.length + offsets[sym]] = value
           } 
         }
       })
-    
-      return async (pc: PC): Promise<any> => {
-        //const promises = params.map(item => pc.next())
-        const values: any[] = []
-        for (let i = 0; i < params.length; i++) {
-          values.push(await pc.next())
+
+      const locals = stackSize - stackParams
+
+      if (!stream)
+        return async (pc: PC): Promise<any> => {
+          for (let i = 0; i < stackParams; i++) {
+            vm.stack.push(await pc.next())
+          }
+          for (let i = 0; i < locals; i++) {
+            vm.stack.push(undefined)
+          }
+          const x = await vm.exec(code)
+          vm.stack.length = vm.stack.length - stackSize
+          return x
         }
-        // console.log(values)
-        vm.stack.push(...values)
-        // console.log('stack', vm.stack)
-        const x = vm.exec(code)
-        const y = await x
-        // console.log(values + ' -> ' + y)
-        vm.stack.length = vm.stack.length - params.length
-        return x
-      }
+      else return (pc: PC): any => {
+        // const values = params.map(param => pc.next())
+        // const out = new Publisher()
+
+        // return { 
+        //   resume: (input?: Publisher<any>): Promise<void> => {
+        //     const ctx = {
+        //       vm: pc.vm,
+        //       out,
+        //     }
+    
+        //     if (!input) {
+        //       return new Promise((resolve, reject) => {
+        //         impl.apply(ctx, values)
+        //         resolve()
+        //       })
+        //     } else {
+        //       return new Promise((resolve, reject) => {
+        //         input.subscribe({
+        //           onSubscribe(s: Subscription): void {},
+        //           onNext(t: any): void {
+        //             impl.apply(ctx, [t])
+        //             resolve()
+        //           },
+        //           onError(e: Error): void {},
+        //           onComplete(): void { resolve() },          
+        //         })
+        //       })
+        //     }
+        //   },
+        //   out,
+        //   mimeType
+        // }
+      }    
     },
 
     async importJsModule (this: Context, url: string): Promise<any> {
