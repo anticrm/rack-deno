@@ -30,9 +30,13 @@ export class Publisher<T> {
     else
       this.subscriber.onNext(val)
   }
+
+  done () {
+    this.subscriber?.onComplete()
+  }
 }
 
-interface Subscriber<T> {
+export interface Subscriber<T> {
   onSubscribe(s: Subscription): void
   onNext(t: T): void 
   onError(e: Error): void 
@@ -42,4 +46,10 @@ interface Subscriber<T> {
 export interface Subscription {
   request(n: number): void;
   cancel(): void;
+}
+
+export type Suspend = { 
+  resume: (input?: Publisher<any>) => Promise<void>
+  out: Publisher<any>,
+  mimeType: string
 }

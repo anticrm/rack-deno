@@ -15,7 +15,7 @@
 
 import { VM, Context, Code, Proc, CodeItem, Word, Bound, bind, bindDictionary, PC, Refinement } from './vm.ts'
 import { parse } from './parse.ts'
-import { Publisher } from './async.ts'
+import { Publisher, Subscription, Suspend, Subscriber } from './async.ts'
 
 export async function importModule(vm: VM, url: URL): Promise<any> {
   console.log('loading module ' + url.toString() + '...')
@@ -69,6 +69,9 @@ function createModule() {
       for (let i = 0; i < params.length; i++) {
         if (params[i] instanceof Refinement) {
           kind = (params[i] as Refinement).ident
+          if (kind === 'out') {
+            stream = true
+          }
         } else switch (kind) {
           case 'default':
             stackParams++
@@ -77,11 +80,67 @@ function createModule() {
             const word = params[i] as Word
             offsets[word.sym] = pos++
             break
-          case 'out':
-            stream = true
-            break
           default: 
             throw new Error('unknown kind')
+        }
+      }
+
+      const vm = this.vm
+
+      if (stream) {  
+        return async (pc: PC): Promise<any> => {
+          const stack: any[] = Array(stackSize)
+          for (let i = 0; i < stackParams; i++) {
+            stack[i] = await pc.next()
+          } 
+          const out = new Publisher()
+          let inputValueHolder: any
+          bind(code, (sym: string): Bound | undefined => {
+            if (sym === 'in') {
+              return {
+                get: (sym: string): any => inputValueHolder,
+                set: (sym: string, value: any) => { throw new Error('in is read only') }
+              }                
+            }
+            if (sym === 'out') {
+              return {
+                get: (sym: string): any => async (pc: PC): Promise<any> => out.write(await pc.next()),
+                set: (sym: string, value: any) => { throw new Error('out is read only') }
+              }
+            }
+            if (offsets[sym] !== undefined) {
+              return {
+                get: (sym: string): any => stack[offsets[sym]],
+                set: (sym: string, value: any) => stack[offsets[sym]] = value
+              }
+            }
+          })   
+          return { 
+            resume: async (input?: Publisher<any>): Promise<void> => {
+              if (!input) {
+                const result = await vm.exec(code)
+                console.log('writing done')
+                out.done()
+                return result
+              } else {
+                console.log('PASSSSS')
+                return new Promise((resolve, reject) => {
+                  input.subscribe({
+                    onSubscribe(s: Subscription): void {},
+                    onNext(t: any): void {
+                      console.log('onnext: ' + t)
+                      inputValueHolder = t
+                      vm.exec(code).then(() => resolve())
+                    },
+                    onError(e: Error): void {},
+                    onComplete(): void { console.log('oncomplete'); resolve() },          
+                  })
+                })
+              }
+            },
+            out,
+            // mimeType
+          }  
         }
       }
 
@@ -89,8 +148,6 @@ function createModule() {
         const ofs = offsets[sym]
         offsets[sym] = ofs - stackSize
       }
-
-      const vm = this.vm
     
       bind(code, (sym: string): Bound | undefined => {
         if (offsets[sym]) {
@@ -170,8 +227,36 @@ function createModule() {
 
     async throw (this: Context, message: string): Promise<any> {
       throw new Error(message)
-    }
+    },
     
+    pipe(this: Context, left: Suspend, right: Suspend): Suspend {
+      console.log('LEFT', left)
+      console.log('RIGHT', right)
+      const pub = new Publisher<any>()
+      const sub: Subscriber<any> = {
+        onSubscribe(s: Subscription): void {},
+        onNext(t: any): void {
+          pub.write(t)
+        },
+        onError(e: Error): void {},
+        onComplete(): void {},
+      }
+      left.out.subscribe(sub)
+    
+      return {
+        resume: async (input?: Publisher<any>) => {
+          console.log('resume pipe')
+          return Promise.all([left.resume(input), right.resume(pub)]) as unknown as Promise<void>
+        },
+        out: right.out,
+        mimeType: ''
+      }  
+    },
+
+    print(this: Context, message: string) {
+      console.log('PRINT', message)
+    }
+
   }
 }
 
@@ -189,6 +274,11 @@ module: native [desc code] :core/module
 import-js-module: native [url] :core/importJsModule
 
 throw: native [message] :core/throw
+print: native [message] :core/print
+
+pipe: native [left right] :core/pipe
+write: proc [value /out] [out value]
+passthrough: proc [/out] [print "FUCK" out in]
 `
 
 export default async function (vm: VM) {

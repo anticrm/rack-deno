@@ -21,8 +21,7 @@ import { boot } from './boot.ts'
 import { parse } from './parse.ts'
 import { importModule } from './core.ts'
 import { Refinement } from "./vm.ts"
-// import { VM, PC } from './vm.ts'
-// import { Suspend, Publisher, Subscription } from './async.ts'
+import { Suspend, Publisher, Subscription } from './async.ts'
 
 Deno.test('should parse', () => {
   const x = parse('add 1 2')
@@ -148,8 +147,64 @@ Deno.test('should execute', async () => {
   assertEquals(result, 15)
 })
 
+Deno.test('should execute', async () => {
+  const x = parse('write "7777"')
+  const vm = await boot()
+  vm.bind(x)
+  const suspend: Suspend = await vm.exec(x)
+  let read
+  suspend.out.subscribe({
+    onNext(t: any) {
+      read = t
+    },
+    onSubscribe(s: Subscription): void {},
+    onError(e: Error): void {},
+    onComplete(): void {}
+  })
+  await suspend.resume()
+  assertEquals(read, "7777")
+})
+
+Deno.test('should execute', async () => {
+  const x = parse('pipe write "7777" passthrough')
+  const vm = await boot()
+  vm.bind(x)
+  const suspend: Suspend = await vm.exec(x)
+  let read
+  suspend.out.subscribe({
+    onNext(t: any) {
+      read = t
+    },
+    onSubscribe(s: Subscription): void {},
+    onError(e: Error): void {},
+    onComplete(): void {}
+  })
+  const y = await suspend.resume()
+  assertEquals(read, "7777")
+})
+
 // Deno.test('should execute', async () => {
+//   const x = parse('write "7777"')
 //   const vm = await boot()
-//   const x = await importModule(vm, new URL('../http/mod.y', import.meta.url))
+//   vm.bind(x)
+//   const suspend: Suspend = await vm.exec(x)
+//   try {
+//     await suspend.resume()
+//     assertEquals(true, false)
+//   } catch (err) {
+//     assertEquals(true, true)
+//   }
 // })
 
+// Deno.test('should execute', async () => {
+//   const x = parse('pipe write "7777" passthrough')
+//   const vm = await boot()
+//   vm.bind(x)
+//   const suspend: Suspend = await vm.exec(x)
+//   try {
+//     await suspend.resume()
+//     assertEquals(true, false)
+//   } catch (err) {
+//     assertEquals(true, true)
+//   }
+// })
