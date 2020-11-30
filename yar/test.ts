@@ -114,6 +114,13 @@ Deno.test('should import module', async () => {
   stopModule('mem')
 })
 
+Deno.test('should import module', async () => {
+  const vm = boot()
+  const mod = await importModule(vm, 'http', new URL('../http/mod.y', import.meta.url))
+  assertEquals(typeof mod.expose, 'function')
+  stopModule('http')
+})
+
 Deno.test('should execute', () => {
   const x = parse('add 5 5 throw "message"')
   const vm = boot()

@@ -43,6 +43,10 @@ export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
       const impl = await start()
       dict.Impl = impl
       modules.set(id, impl)
+      if (impl.run) {
+        console.log('run module: ' + url.toString())
+        impl.run().then((res: any) => console.log('run exit', res)).catch((err: any) => console.log('run error', err))
+      }
     }
     bindDictionaryWords(code[2].code, dict)
   } else {
