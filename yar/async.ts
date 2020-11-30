@@ -16,12 +16,16 @@
 export class Publisher<T> {
   private subscriber?: Subscriber<T>
   private queue: any[] = []
+  private close = false
 
   subscribe(s: Subscriber<T>): void {
     this.subscriber = s
     // console.log('flushing ' + this.queue.length + ' elements')
     this.queue.forEach(item => s.onNext(item))
     this.queue = []
+    if (this.close) {
+      this.subscriber.onComplete()
+    }
   }
 
   write(val: T) {
@@ -32,7 +36,11 @@ export class Publisher<T> {
   }
 
   done () {
-    this.subscriber?.onComplete()
+    if (this.subscriber) {
+      this.subscriber.onComplete()
+    } else {
+      this.close = true
+    }
   }
 }
 
@@ -51,4 +59,5 @@ export interface Subscription {
 export type Suspend = { 
   resume: (input?: Publisher<any>) => Promise<void>
   out: Publisher<any>,
+  in?: Publisher<any>
 }

@@ -230,7 +230,7 @@ export class VM {
     })
   }
 
-  exec(code: Code, trace = false): Promise<any> {
+  exec(code: Code, trace = false): any {
     return new PC(this, code).exec(trace)
   }
 
@@ -250,7 +250,10 @@ export class PC {
   nextNoInfix(): Promise<any> {
     let result = this.code[this.pc++].exec(this)    
     if (typeof result === 'object' && (result as any).out) {
-      console.log('suspend here', result)
+      //console.log('suspend here', result)
+      const promise = (result as any).resume() as Promise<void>
+      //promise.then((res: any) => { console.log('proc done, ', res)}).catch((err: any) => { console.log ('proc err', err)})
+      ;(result as any).resume = promise
     }
     this.vm.result = result
     return result
