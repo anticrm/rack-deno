@@ -16,10 +16,14 @@
 import { connect, Redis } from "https://deno.land/x/redis/mod.ts"
 import { Context } from '../y/vm.ts'
 
-let redis = await connect({
-  hostname: "127.0.0.1",
-  port: 6379
-})
+let redis: Redis 
+
+async function start() {
+  redis = await connect({
+    hostname: "127.0.0.1",
+    port: 6379
+  })
+}
 
 function getClient(): Redis {
   return redis

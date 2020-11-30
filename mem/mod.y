@@ -1,6 +1,7 @@
 
-module [] [
-  impl: import-js-module "./mod.ts"
-  set: native [key value] :impl/set
-  get: native [key] :impl/get
+module [
+  Impl-TypeScript: "./mod.ts"
+] [
+  set: native [key value] :Impl/set
+  get: native [key] :Impl/get
 ]

@@ -14,7 +14,7 @@
 //
 
 type Dict = { [key: string]: any }
-export type Proc = (pc: PC) => Promise<any>
+export type Proc = (pc: PC) => any
 
 export enum WordKind {
   Norm = 0,
@@ -54,12 +54,12 @@ export class Word extends CodeItem {
     if (bound) this.bound = bound
   }
 
-  async exec (pc: PC): Promise<any> {
+  exec (pc: PC): any {
     if (!this.bound)
       throw new Error('word not bound ' + this.sym)
     switch (this.kind) {
       case WordKind.Set: 
-        const x = await pc.next()
+        const x = pc.next()
         this.bound.set(this.sym, x)
         return x
       case WordKind.Norm:
@@ -94,7 +94,7 @@ export class Path extends CodeItem {
     if (bound) this.bound = bound
   }
 
-  async exec (pc: PC): Promise<any> {
+  exec (pc: PC): Promise<any> {
     if (!this.bound)
       throw new Error('path not bound')
     switch (this.kind) {
@@ -118,7 +118,7 @@ export class Brackets extends CodeItem {
     throw new Error('not implemented')
   }
 
-  async exec (pc: PC): Promise<any> {
+  exec (pc: PC): any {
     throw new Error('not implemented')
   }
 }
@@ -133,7 +133,7 @@ export class Const extends CodeItem {
 
   bind() {}
 
-  async exec (): Promise<any> {
+  exec (): Promise<any> {
     return this.val
   }
 
@@ -151,7 +151,7 @@ export class Block extends CodeItem {
     bind(this.code, f)
   }
 
-  async exec (pc: PC): Promise<any> {
+  exec (pc: PC): any {
     return this.code
   }
 
@@ -168,7 +168,7 @@ export class Refinement extends CodeItem {
   bind(f: BindFactory) {
   }
 
-  async exec (pc: PC): Promise<any> {
+  exec (pc: PC): any {
     throw new Error('refinement execution')
   }
 
@@ -204,11 +204,22 @@ export function bindDictionary(code: Code, dict: { [key: string]: any }) {
   })
 }
 
+export function bindDictionaryWords(code: Code, dict: { [key: string]: any }) {
+  bind(code, (sym: string) => {
+    if (dict[sym]) {
+      return { 
+        get: (sym: string) => dict[sym],
+        set: (sym: string, value: any) => dict[sym] = value
+      }  
+    }
+  })
+}
+
 export class VM {
   dictionary: Dict = {}
   stack: any[] = []
   result: any
-  url?: URL
+  // url?: URL
 
   bind(code: Code) {
     bind(code, () => {
@@ -219,7 +230,7 @@ export class VM {
     })
   }
 
-  async exec(code: Code, trace = false): Promise<any> {
+  exec(code: Code, trace = false): Promise<any> {
     return new PC(this, code).exec(trace)
   }
 
@@ -238,25 +249,25 @@ export class PC {
 
   nextNoInfix(): Promise<any> {
     let result = this.code[this.pc++].exec(this)    
-    if ((result as any).out) {
+    if (typeof result === 'object' && (result as any).out) {
       console.log('suspend here', result)
     }
     this.vm.result = result
     return result
   }
 
-  async next(): Promise<any> {
+  next(): any {
     const result = this.nextNoInfix()
     return ((this.code[this.pc] as any)?.infix) ? this.nextNoInfix() : result
   }
 
-  async exec(trace = false): Promise<any> {
+  exec(trace = false): any {
     if (trace) {
       console.log('exec: ', this.code)
     }
     let result
     while (this.pc < this.code.length) {
-      result = await this.next()
+      result = this.next()
       if (trace) {
         console.log('> ', result)
       }
