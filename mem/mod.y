@@ -1,4 +1,3 @@
-
 module [
   Impl-TypeScript: "./mod.ts"
 ] [

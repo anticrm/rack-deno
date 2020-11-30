@@ -14,25 +14,31 @@
 //
 
 import { connect, Redis } from "https://deno.land/x/redis/mod.ts"
+import { stripColor } from "https://deno.land/std@0.78.0/fmt/colors.ts"
 import { Context } from '../y/vm.ts'
 
-let redis: Redis 
+export default async () => {
 
-async function start() {
-  redis = await connect({
+  console.log('connecting to redis server')
+  const redis = await connect({
     hostname: "127.0.0.1",
     port: 6379
   })
+
+  return { 
+    set(this: Context, key: string, value: string) {
+      return redis.set(key, value)
+    },
+  
+    get(this: Context, key: string) {
+      return redis.get(key)
+    },
+
+    stop () {
+      console.log('closing redis connection')
+      redis.close()
+    }
+  }
+  
 }
 
-function getClient(): Redis {
-  return redis
-}
-
-export async function set(this: Context, key: string, value: string) {
-  return getClient().set(key, value)
-}
-
-export async function get(this: Context, key: string) {
-  return getClient().get(key)
-}

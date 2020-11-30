@@ -1,9 +1,6 @@
-
-
-
-
-module [] [
-
+module [
+  Require: [mem http]
+] [
   new-video: proc [/local id] [
     id: uuid
     job save-video transcode get-video
@@ -23,4 +20,5 @@ module [] [
     mem/set video-key id chunk in
   ]
 
+  http/expose :video-chunk "/video-chunk" [/query id chunk]
 ]

@@ -64,14 +64,16 @@ export class Word extends CodeItem {
         return x
       case WordKind.Norm:
         const f = this.bound.get(this.sym)
-        // if (f === undefined) {
-        //   throw new Error('nothing when read ' + this.sym)
-        // }
+        if (f === undefined) {
+          throw new Error('nothing when read ' + this.sym)
+        }
         if (this.infix) {
           return f(pc, pc.vm.result, pc.nextNoInfix())
         } else {
           return typeof f === 'function' ? f(pc) : f
         }
+      case WordKind.Get:
+        return this.bound.get(this.sym)
       default: 
         throw new Error('not implemented')
     }

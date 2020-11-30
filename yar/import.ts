@@ -16,7 +16,9 @@
 import { VM, bindDictionary, bindDictionaryWords } from './vm.ts'
 import { parse } from './parse.ts'
 
-export async function importModule(vm: VM, url: URL): Promise<any> {
+const modules = new Map<string, any>()
+
+export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
   // console.log('loading module ' + url.toString() + '...')
   // vm.url = url
   const buf = await Deno.readFile(url)
@@ -33,11 +35,29 @@ export async function importModule(vm: VM, url: URL): Promise<any> {
 
   const implTS = meta['Impl-TypeScript']
   if (implTS) {
-    dict['Impl'] = await import(new URL(implTS, url).toString())
+    const mod = await import(new URL(implTS, url).toString())
+    const start = mod.default
+    if (!start) {
+      console.log('no run method, module: ' + url.toString())
+    } else {
+      const impl = await start()
+      dict.Impl = impl
+      modules.set(id, impl)
+    }
     bindDictionaryWords(code[2].code, dict)
+  } else {
+    console.log('no implementation')
   }
 
   bindDictionary(code[2].code, dict)
   vm.exec(code[2].code)
   return dict
+}
+
+export function stopModule(id: string) {
+  const mod = modules.get(id)
+  if (mod) {
+    mod.stop()
+  } else
+    throw new Error('Module not found')
 }

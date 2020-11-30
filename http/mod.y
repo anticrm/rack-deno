@@ -1,4 +1,5 @@
-module [] [
-  impl: import-js-module "./mod.ts"
-  expose: native [fn path params] :impl/expose
+module [
+  Impl-TypeScript: "./mod.ts"
+] [
+  expose: native [fn path params] :Impl/expose
 ]

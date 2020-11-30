@@ -16,7 +16,7 @@
 import { VM } from '../yar/vm.ts'
 import { parse } from '../yar/parse.ts'
 import { boot } from '../yar/boot.ts'
-import { importModule } from '../y/core.ts'
+import { importModule } from '../yar/import.ts'
 
 export class Node {
   private vm!: VM
@@ -27,8 +27,8 @@ export class Node {
     console.log('creating yarilo vm...')
     this.vm = boot()
     // console.log('importing mem module...')
-    this.vm.dictionary['mem'] = await importModule(this.vm, new URL('../mem/mod.y', import.meta.url))
-    this.vm.dictionary['http'] = await importModule(this.vm, new URL('../http/mod.y', import.meta.url))
+    this.vm.dictionary['mem'] = await importModule(this.vm, 'mem', new URL('../mem/mod.y', import.meta.url))
+    this.vm.dictionary['http'] = await importModule(this.vm, 'http', new URL('../http/mod.y', import.meta.url))
   }
 
   exec(code: string): any {

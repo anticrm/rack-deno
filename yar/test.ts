@@ -20,7 +20,7 @@ import {
 import { boot } from './boot.ts'
 import { parse } from './parse.ts'
 import { Refinement } from "./vm.ts"
-import { importModule } from './import.ts'
+import { importModule, stopModule } from './import.ts'
 import { Suspend, Subscription } from './async.ts'
 
 Deno.test('should parse', () => {
@@ -108,9 +108,10 @@ Deno.test('should execute', () => {
 
 Deno.test('should import module', async () => {
   const vm = boot()
-  const mod = await importModule(vm, new URL('../mem/mod.y', import.meta.url))
+  const mod = await importModule(vm, 'mem', new URL('../mem/mod.y', import.meta.url))
   assertEquals(typeof mod.set, 'function')
   assertEquals(typeof mod.get, 'function')
+  stopModule('mem')
 })
 
 Deno.test('should execute', () => {
