@@ -15,6 +15,7 @@
 
 import { readLines } from "https://deno.land/std/io/mod.ts"
 import { Node } from './node.ts'
+import { Subscription } from '../yar/async.ts'
 
 async function main() {
   try {
@@ -32,8 +33,20 @@ async function main() {
       await Deno.stdout.write(new TextEncoder().encode('rackOS> '))
       const input = await readLines(Deno.stdin).next()
       const code = input.value
-      const result = await node.exec(code)
-      cb (null, result)
+      const result = node.exec(code)
+      if (typeof result === 'object' && result.resume) {
+        result.out.subscribe({
+          onNext(t: any) {
+            console.log(t)
+          },
+          onSubscribe(s: Subscription): void {},
+          onError(e: Error): void {},
+          onComplete(): void {}
+        })
+        const res = await result.resume
+        cb(null, res)
+      } else
+        cb(null, result)
     }
   } catch (err) {
     console.log('error: ', err)

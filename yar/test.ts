@@ -165,3 +165,63 @@ Deno.test('should execute', async () => {
   await (suspend.resume as unknown as Promise<void>)
   assertEquals(read, "7777")
 })
+
+Deno.test('should execute', async () => {
+  const x = parse('generate: proc [] [out 1 out 2 out 3] doubler: proc [/in /out] [out add in in] pipe generate doubler')
+  const vm = boot()
+  vm.bind(x)
+  const suspend: Suspend = vm.exec(x)
+  const read: any[] = []
+  suspend.out.subscribe({
+    onNext(t: any) {
+      read.push(t)
+    },
+    onSubscribe(s: Subscription): void {},
+    onError(e: Error): void {},
+    onComplete(): void {
+      console.log('on complete here!')
+    }
+  })
+  await (suspend.resume as unknown as Promise<void>)
+  assertEquals(read, [2, 4, 6])
+})
+
+Deno.test('should execute', async () => {
+  const x = parse('generate: proc [] [out 1 out 2 out 3] doubler: proc [/in /out] [out add in in] pipe generate doubler')
+  const vm = boot()
+  vm.bind(x)
+  const suspend: Suspend = vm.exec(x)
+  const read: any[] = []
+  suspend.out.subscribe({
+    onNext(t: any) {
+      read.push(t)
+    },
+    onSubscribe(s: Subscription): void {},
+    onError(e: Error): void {},
+    onComplete(): void {
+      console.log('on complete here!')
+    }
+  })
+  await (suspend.resume as unknown as Promise<void>)
+  assertEquals(read, [2, 4, 6])
+})
+
+Deno.test('should execute', async () => {
+  const x = parse('generate: proc [] [loop 1000 [out 8]] doubler: proc [/in /out] [out add in add in add in in] pipe generate doubler')
+  const vm = boot()
+  vm.bind(x)
+  const suspend: Suspend = vm.exec(x)
+  let read: any
+  suspend.out.subscribe({
+    onNext(t: any) {
+      read = t
+    },
+    onSubscribe(s: Subscription): void {},
+    onError(e: Error): void {},
+    onComplete(): void {
+      console.log('on complete here!')
+    }
+  })
+  await (suspend.resume as unknown as Promise<void>)
+  assertEquals(read, 32)
+})

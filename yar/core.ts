@@ -45,6 +45,13 @@ function createModule() {
       return this.vm.exec(cond ? ifTrue : ifFalse)
     },
 
+    loop(this: Context, times: number, code: Code): any {
+      let result
+      for (let i = 0; i < times; i++) 
+        result = this.vm.exec(code)
+      return result
+    },
+
     proc (this: Context, params: Code, code: Code): Proc {
 
       const offsets: { [key: string]: number } = {}
@@ -199,8 +206,7 @@ function createModule() {
       // console.log('RIGHT', right)
       if (right.in === undefined)
         throw new Error('no input on the right side')
-      // const pub = new Publisher<any>()
-      const sub: Subscriber<any> = {
+      left.out.subscribe({
         onSubscribe(s: Subscription): void {},
         onNext(t: any): void {
           (right.in as Publisher<any>).write(t)
@@ -209,8 +215,7 @@ function createModule() {
         onComplete(): void {
           (right.in as Publisher<any>).done()
         },
-      }
-      left.out.subscribe(sub)
+      })
     
       return {
         resume: async () => Promise.all([left.resume, right.resume]) as unknown as Promise<void>,
@@ -259,6 +264,7 @@ fn: native [params code] :core/fn
 proc: native [params code] :core/proc
 
 either: native [cond ifTrue ifFalse] :core/either
+loop: native [times code] :core/loop
 
 throw: native [message] :core/throw
 print: native [message] :core/print

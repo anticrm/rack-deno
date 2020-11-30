@@ -13,9 +13,9 @@
 // limitations under the License.
 //
 
-import { VM } from '../y/vm.ts'
-import { parse } from '../y/parse.ts'
-import { boot } from '../y/boot.ts'
+import { VM } from '../yar/vm.ts'
+import { parse } from '../yar/parse.ts'
+import { boot } from '../yar/boot.ts'
 import { importModule } from '../y/core.ts'
 
 export class Node {
@@ -25,7 +25,7 @@ export class Node {
   async boot () {
     console.log('starting node boot sequence...')
     console.log('creating yarilo vm...')
-    this.vm = await boot()
+    this.vm = boot()
     // console.log('importing mem module...')
     this.vm.dictionary['mem'] = await importModule(this.vm, new URL('../mem/mod.y', import.meta.url))
     this.vm.dictionary['http'] = await importModule(this.vm, new URL('../http/mod.y', import.meta.url))
