@@ -3,6 +3,7 @@ module [
     mem: "./mem/mod.y"
     http: "./http/mod.y"
   ]
+  Impl-TypeScript: "./mod.ts"
 ] [
   new-video: fn [/local id] [
     id: uuid
@@ -22,7 +23,13 @@ module [
     mem/set video-key id chunk in
   ]
 
-  login: fn 
+  verify-password: proc [/in /out] [
+    if compare-md5 password in/password [out jwt-encode [email: in/email]] [throw "password does not match"]
+  ]
+
+  login: proc [email password] [
+    db/find-one "user" [email: email] | verify-password
+  ]
 
   http/expose :video-chunk "/video-chunk" [/query id chunk]
 ]
