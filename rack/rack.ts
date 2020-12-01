@@ -46,8 +46,9 @@ async function main() {
           })
           const res = await result.resume
           cb(null, res)
-        } else
+        } else {
           cb(null, result)
+        }
       } catch (err) {
         cb(err, undefined)
       }

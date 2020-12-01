@@ -26,6 +26,7 @@ export class Node extends VM {
     boot(this)
     this.dictionary['rack'] = await importModule(this, 'rack', new URL('../rack/mod.y', import.meta.url))
     this.dictionary['db'] = await importModule(this, 'db', new URL('../db/mod.y', import.meta.url))
+    this.dictionary['scrn'] = await importModule(this, 'scrn', new URL('../scrn/mod.y', import.meta.url))
   }
 
   async deploy(id: string, url: URL) {

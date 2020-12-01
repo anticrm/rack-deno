@@ -47,6 +47,21 @@ export default async () => {
       }
     },
 
+    insert (this: Context, collection: string, data: Code) {
+      const out = new Publisher()
+      return {
+        resume: async () => {
+          const dict = {} as { [key: string]: string }
+          bindDictionary(data, dict)
+          this.vm.exec(data)
+          const result = await db.collection(collection).insert(dict)
+          out.write(result)
+          out.done()
+        },
+        out
+      }
+    },
+
     stop () {
       console.log('closing mongodb connection...')
       client.close()

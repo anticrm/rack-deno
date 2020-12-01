@@ -60,7 +60,7 @@ function createModule() {
         throw new Error('unsupported type: ' + code)
       }
     },
-
+    
     proc (this: Context, params: Code, code: Code): Proc {
 
       const offsets: { [key: string]: number } = {}

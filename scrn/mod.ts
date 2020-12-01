@@ -16,16 +16,21 @@
 import { Context } from '../yar/vm.ts'
 import { Buffer } from 'https://deno.land/std/node/buffer.ts'
 import { pbkdf2Sync } from 'https://deno.land/std/node/_crypto/pbkdf2.ts'
-
-function hashWithSalt (password: string, salt: Buffer): Buffer {
-  return pbkdf2Sync(password, salt, 1000, 32, 'sha256')
-}
+import randomBytes from 'https://deno.land/std/node/_crypto/randomBytes.ts'
 
 export default async () => {
 
   return { 
-    compareHash(this: Context, password: string, hash: Buffer, salt: Buffer) {
-      return true
+    randomBytes(this: Context, len: number) {
+      return randomBytes(len)
+    },
+
+    pbkdf2(this: Context, pass: string, salt: Buffer, iterations: number, length: number, digest: any) {
+      return pbkdf2Sync(pass, salt, iterations, length, digest)
+    },
+
+    equalsBuffer(this: Context, left: Buffer, right: Buffer) {
+      return left.equals(right)
     },
   
     stop () {

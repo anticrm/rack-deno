@@ -251,7 +251,7 @@ export class PC {
 
   nextNoInfix(): Promise<any> {
     let result = this.code[this.pc++].exec(this)    
-    if (typeof result === 'object' && (result as any).out) {
+    if (typeof result === 'object' && typeof (result as any).resume === 'function') {
       //console.log('suspend here', result)
       const promise = (result as any).resume() as Promise<void>
       //promise.then((res: any) => { console.log('proc done, ', res)}).catch((err: any) => { console.log ('proc err', err)})

@@ -5,31 +5,27 @@ module [
   ]
   Impl-TypeScript: "./mod.ts"
 ] [
-  new-video: fn [/local id] [
-    id: uuid
+  key-len: 32
+
+  random-bytes: native [len] :Impl/randomBytes
+  pbkdf2: native [pass salt iter len digest] :Impl/pbkdf2
+  compare-hash: native [pass hash salt] :Impl/compareHash
+  equals-buffer: native [letf right] :Impl/equalsBuffer
+
+  hash-with-salt: fn [pass salt] [pbkdf2 pass salt 1000 key-len "sha1"]
+
+  verify-password: proc [pass /in /out] [
+    out either equals-buffer hash-with-salt pass in/salt/buffer in/hash/buffer [1] [2]
   ]
 
-  video-key: fn [id chunk] [join id ["." chunk]]
-
-  get-video: proc [id /out /local chunk] [
-    chunk: 0
-    while [unset? mem/get join video-key id chunk ".last"] [      
-      copy mem/get video-key id chunk out
-      chunk: add chunk 1      
-    ]
+  login: fn [_email password] [
+    pipe db/find-one "user" [email: _email] verify-password password
   ]
 
-  video-chunk: proc [id chunk /in] [
-    mem/set video-key id chunk in
+  create-user: fn [_email password] [
+    _salt: random-bytes key-len
+    _hash: hash-with-salt password _salt
+    db/insert "user" [email: _email hash: _hash salt: _salt]
   ]
 
-  verify-password: proc [/in /out] [
-    if compare-md5 password in/password [out jwt-encode [email: in/email]] [throw "password does not match"]
-  ]
-
-  login: proc [email password] [
-    db/find-one "user" [email: email] | verify-password
-  ]
-
-  http/expose :video-chunk "/video-chunk" [/query id chunk]
 ]
