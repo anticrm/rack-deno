@@ -46,12 +46,7 @@ function native(pc: PC): Proc {
 //   }
 // }
 
-export function boot(): VM {
-  const vm = new VM()
+export function boot(vm: VM) {
   vm.dictionary['native'] = native
-  // vm.dictionary['native-infix'] = nativeInfix
-  // vm.dictionary['native-async'] = nativeAsync
   coreModule(vm)
-  // asyncModule(vm)
-  return vm
 }

@@ -19,7 +19,7 @@ import {
 
 import { boot } from './boot.ts'
 import { parse } from './parse.ts'
-import { Refinement } from "./vm.ts"
+import { VM, Refinement } from "./vm.ts"
 import { importModule, stopModule } from './import.ts'
 import { Suspend, Subscription } from './async.ts'
 
@@ -45,69 +45,69 @@ Deno.test('should parse', () => {
 
 Deno.test('should execute', () => {
   const x = parse('add 10 20')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 30)
 })
 
 Deno.test('should execute', () => {
   const x = parse('add add 1 2 3')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 6)
 })
 
 Deno.test('should execute', () => {
   const x = parse('sub 1 20')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), -19)
 })
 
 Deno.test('should execute', () => {
   const x = parse('x: fn [n] [add n 10] x 5')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 15)
 })
 
 Deno.test('should execute', () => {
   const x = parse('either gt 2 1 [5] [6]')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 5)
 })
 
 Deno.test('should execute', () => {
   const x = parse('fib: fn [n] [either gt n 1 [add n n] [n]] fib 10')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 20)
 })
 
 Deno.test('should execute', () => {
   const x = parse('fib: fn [n] [either gt n 1 [add n fib sub n 1] [n]] fib 100')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 5050)
 })
 
 Deno.test('should execute', () => {
   const x = parse('fib: fn [n] [either gt n 1 [add fib sub n 2 fib sub n 1] [n]] fib 20')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 6765)
 })
 
 Deno.test('should execute', () => {
   const x = parse('fib: fn [n] [either gt n 1 [add fib sub n 2 fib sub n 1] [n]] fib 20')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 6765)
 })
 
 Deno.test('should import module', async () => {
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   const mod = await importModule(vm, 'mem', new URL('../mem/mod.y', import.meta.url))
   assertEquals(typeof mod.set, 'function')
   assertEquals(typeof mod.get, 'function')
@@ -115,7 +115,7 @@ Deno.test('should import module', async () => {
 })
 
 Deno.test('should import module', async () => {
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   const mod = await importModule(vm, 'http', new URL('../http/mod.y', import.meta.url))
   assertEquals(typeof mod.expose, 'function')
   stopModule('http')
@@ -123,14 +123,14 @@ Deno.test('should import module', async () => {
 
 Deno.test('should execute', () => {
   const x = parse('add 5 5 throw "message"')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   assertThrowsAsync(() => vm.exec(x))
 })
 
 Deno.test('should execute', () => {
   const x = parse('x: 10 p: fn [/local x] [x: 5 x] add p x')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   const result = vm.exec(x)
   assertEquals(result, 15)
@@ -138,7 +138,7 @@ Deno.test('should execute', () => {
 
 Deno.test('should execute', async () => {
   const x = parse('write "7777"')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   const suspend: Suspend = vm.exec(x)
   let read
@@ -156,7 +156,7 @@ Deno.test('should execute', async () => {
 
 Deno.test('should execute', async () => {
   const x = parse('pipe write "7777" passthrough')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   const suspend: Suspend = vm.exec(x)
   let read
@@ -176,7 +176,7 @@ Deno.test('should execute', async () => {
 
 Deno.test('should execute', async () => {
   const x = parse('generate: proc [] [out 1 out 2 out 3] doubler: proc [/in /out] [out add in in] pipe generate doubler')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   const suspend: Suspend = vm.exec(x)
   const read: any[] = []
@@ -196,7 +196,7 @@ Deno.test('should execute', async () => {
 
 Deno.test('should execute', async () => {
   const x = parse('generate: proc [] [out 1 out 2 out 3] doubler: proc [/in /out] [out add in in] pipe generate doubler')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   const suspend: Suspend = vm.exec(x)
   const read: any[] = []
@@ -216,7 +216,7 @@ Deno.test('should execute', async () => {
 
 Deno.test('should execute', async () => {
   const x = parse('generate: proc [] [loop 1000 [out 8]] doubler: proc [/in /out] [out add in add in add in in] pipe generate doubler')
-  const vm = boot()
+  const vm = new VM(); boot(vm)
   vm.bind(x)
   const suspend: Suspend = vm.exec(x)
   let read: any

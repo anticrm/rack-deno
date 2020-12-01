@@ -18,22 +18,26 @@ import { parse } from '../yar/parse.ts'
 import { boot } from '../yar/boot.ts'
 import { importModule } from '../yar/import.ts'
 
-export class Node {
-  private vm!: VM
-  private deployments: { [key: string]: VM }  = {}
+export class Node extends VM {
+  private deployments = new Map<string, VM>()
 
   async boot () {
     console.log('starting node boot sequence...')
-    console.log('creating yarilo vm...')
-    this.vm = boot()
-    // console.log('importing mem module...')
-    this.vm.dictionary['mem'] = await importModule(this.vm, 'mem', new URL('../mem/mod.y', import.meta.url))
-    this.vm.dictionary['http'] = await importModule(this.vm, 'http', new URL('../http/mod.y', import.meta.url))
+    boot(this)
+    this.dictionary['rack'] = await importModule(this, 'rack', new URL('../rack/mod.y', import.meta.url))
   }
 
-  exec(code: string): any {
+  async deploy(id: string, url: URL) {
+    console.log(`deploying '${id}'...`)
+    const vm = new VM()
+    boot(vm)
+    this.deployments.set(id, vm)
+    this.dictionary[id] = await importModule(this, 'rack', url)
+  }
+
+  parseAndExec(code: string): any {
     const parsed = parse(code)
-    this.vm.bind(parsed)
-    return this.vm.exec(parsed)
+    this.bind(parsed)
+    return this.exec(parsed)
   }
 }

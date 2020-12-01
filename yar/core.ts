@@ -52,6 +52,15 @@ function createModule() {
       return result
     },
 
+    do(this: Context, code: any): any {
+      if (Array.isArray(code)) {
+        // assume code block
+        return this.vm.exec(code)
+      } else {
+        throw new Error('unsupported type: ' + code)
+      }
+    },
+
     proc (this: Context, params: Code, code: Code): Proc {
 
       const offsets: { [key: string]: number } = {}

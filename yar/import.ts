@@ -19,7 +19,7 @@ import { parse } from './parse.ts'
 const modules = new Map<string, any>()
 
 export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
-  // console.log('loading module ' + url.toString() + '...')
+  console.log('loading module ' + url.toString() + '...')
   // vm.url = url
   const buf = await Deno.readFile(url)
   const code = parse(new TextDecoder().decode(buf))
@@ -33,6 +33,17 @@ export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
   bindDictionary(code[1].code, meta)
   vm.exec(code[1].code)
 
+  const req = meta['Require']
+  if (req) {
+    const dict = {} as { [key: string]: any }
+    bindDictionary(req, dict)
+    vm.exec(req)
+    const u = new URL('..', url)
+    for (const key in dict) {
+      await importModule(vm, key, new URL(dict[key], u))
+    }
+  }
+
   const implTS = meta['Impl-TypeScript']
   if (implTS) {
     const mod = await import(new URL(implTS, url).toString())
@@ -40,7 +51,7 @@ export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
     if (!start) {
       console.log('no run method, module: ' + url.toString())
     } else {
-      const impl = await start()
+      const impl = await start(vm)
       dict.Impl = impl
       modules.set(id, impl)
       if (impl.run) {
@@ -55,6 +66,7 @@ export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
 
   bindDictionary(code[2].code, dict)
   vm.exec(code[2].code)
+  vm.dictionary[id] = dict
   return dict
 }
 

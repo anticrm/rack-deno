@@ -30,23 +30,27 @@ async function main() {
       }
     }
     while(true) {
-      await Deno.stdout.write(new TextEncoder().encode('rackOS> '))
-      const input = await readLines(Deno.stdin).next()
-      const code = input.value
-      const result = node.exec(code)
-      if (typeof result === 'object' && result.resume) {
-        result.out.subscribe({
-          onNext(t: any) {
-            console.log(t)
-          },
-          onSubscribe(s: Subscription): void {},
-          onError(e: Error): void {},
-          onComplete(): void {}
-        })
-        const res = await result.resume
-        cb(null, res)
-      } else
-        cb(null, result)
+      try {
+        await Deno.stdout.write(new TextEncoder().encode('rackOS> '))
+        const input = await readLines(Deno.stdin).next()
+        const code = input.value
+        const result = node.parseAndExec(code)
+        if (typeof result === 'object' && result.resume) {
+          result.out.subscribe({
+            onNext(t: any) {
+              console.log(t)
+            },
+            onSubscribe(s: Subscription): void {},
+            onError(e: Error): void {},
+            onComplete(): void {}
+          })
+          const res = await result.resume
+          cb(null, res)
+        } else
+          cb(null, result)
+      } catch (err) {
+        cb(err, undefined)
+      }
     }
   } catch (err) {
     console.log('error: ', err)

@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-import { Context, Proc, VM, PC, Code, Refinement, Word, Const } from '../y/vm.ts'
+import { Context, Proc, VM, PC, Code, Refinement, Word, Const } from '../yar/vm.ts'
 import { serve, ServerRequest } from "https://deno.land/std/http/server.ts"
 
 enum Extract {
@@ -71,7 +71,10 @@ export default async () => {
           }
         } else if (param instanceof Word) {
           extractors.push(extractFactory[kind](param.sym))
-        } else throw new Error('unsupported param kind')
+        } else {
+          console.log(param)
+          throw new Error('unsupported param kind')
+        }
       })
     
       const launch = async (request: ServerRequest): Promise<any> => {

@@ -21,4 +21,6 @@ module [
   ]
 
   http/expose :video-chunk "/video-chunk" [/query id chunk]
+  http/expose :video-chunk "/video-chunk" [/query id chunk]
+  http/expose :video-chunk "/video-chunk" [/query id chunk]
 ]
