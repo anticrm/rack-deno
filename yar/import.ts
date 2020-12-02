@@ -26,7 +26,8 @@ export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
     const buf = await Deno.readFile(url)
     text = new TextDecoder().decode(buf)
   } else if (url.protocol.startsWith('http')) {
-    text = await (await fetch(url)).text()
+    console.log('url', url.toString())
+    text = await (await fetch(url.toString())).text()
     console.log('text', text)
   } else {
     throw new Error('unsupported protocol: ' + url.protocol)
