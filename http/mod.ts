@@ -43,7 +43,7 @@ export default async () => {
           const proc = procs.get(new URL(request.url, base).pathname)
           if (proc) {
             const result = await proc(request)
-            request.respond({ status: 200, body: result })
+            request.respond({ status: 200, body: result.toString() })
           } else {
             request.respond({ status: 404 })
           }

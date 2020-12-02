@@ -56,8 +56,10 @@ function createModule() {
       if (Array.isArray(code)) {
         // assume code block
         return this.vm.exec(code)
-      } else {
-        throw new Error('unsupported type: ' + code)
+      } else if (typeof code === 'string') {
+        const x = parse(code)
+        this.vm.bind(x)
+        return this.vm.exec(x)
       }
     },
     
@@ -274,6 +276,7 @@ proc: native [params code] :core/proc
 
 either: native [cond ifTrue ifFalse] :core/either
 loop: native [times code] :core/loop
+do: native [code] :core/do
 
 throw: native [message] :core/throw
 print: native [message] :core/print

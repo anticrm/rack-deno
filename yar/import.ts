@@ -16,8 +16,6 @@
 import { VM, bindDictionary, bindDictionaryWords } from './vm.ts'
 import { parse } from './parse.ts'
 
-const modules = new Map<string, any>()
-
 export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
   console.log('loading module ' + url.toString() + '...')
   // vm.url = url
@@ -26,7 +24,7 @@ export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
     const buf = await Deno.readFile(url)
     text = new TextDecoder().decode(buf)
   } else if (url.protocol.startsWith('http')) {
-    console.log('url', url.toString())
+    console.log('url', url)
     text = await (await fetch(url.toString())).text()
     console.log('text', text)
   } else {
@@ -63,7 +61,7 @@ export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
     } else {
       const impl = await start(vm)
       dict.Impl = impl
-      modules.set(id, impl)
+      // modules.set(id, impl)
       if (impl.run) {
         console.log('run module: ' + url.toString())
         impl.run().then((res: any) => console.log('run exit', res)).catch((err: any) => console.log('run error', err))
@@ -80,10 +78,10 @@ export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
   return dict
 }
 
-export function stopModule(id: string) {
-  const mod = modules.get(id)
-  if (mod) {
-    mod.stop()
-  } else
-    throw new Error('Module not found')
-}
+// export function stopModule(id: string) {
+//   const mod = modules.get(id)
+//   if (mod) {
+//     mod.stop()
+//   } else
+//     throw new Error('Module not found')
+// }

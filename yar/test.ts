@@ -20,7 +20,7 @@ import {
 import { boot } from './boot.ts'
 import { parse } from './parse.ts'
 import { VM, Refinement } from "./vm.ts"
-import { importModule, stopModule } from './import.ts'
+import { importModule } from './import.ts'
 import { Suspend, Subscription } from './async.ts'
 
 Deno.test('should parse', () => {
@@ -111,15 +111,15 @@ Deno.test('should import module', async () => {
   const mod = await importModule(vm, 'mem', new URL('../mem/mod.y', import.meta.url))
   assertEquals(typeof mod.set, 'function')
   assertEquals(typeof mod.get, 'function')
-  stopModule('mem')
+  mod.Impl.stop()
 })
 
-Deno.test('should import module', async () => {
-  const vm = new VM(); boot(vm)
-  const mod = await importModule(vm, 'http', new URL('../http/mod.y', import.meta.url))
-  assertEquals(typeof mod.expose, 'function')
-  stopModule('http')
-})
+// Deno.test('should import module', async () => {
+//   const vm = new VM(); boot(vm)
+//   const mod = await importModule(vm, 'http', new URL('../http/mod.y', import.meta.url))
+//   assertEquals(typeof mod.expose, 'function')
+//   mod.Impl.stop()
+// })
 
 Deno.test('should execute', () => {
   const x = parse('add 5 5 throw "message"')
@@ -134,6 +134,14 @@ Deno.test('should execute', () => {
   vm.bind(x)
   const result = vm.exec(x)
   assertEquals(result, 15)
+})
+
+Deno.test('should execute', () => {
+  const x = parse('do [add 5 5]')
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  const result = vm.exec(x)
+  assertEquals(result, 10)
 })
 
 Deno.test('should execute', async () => {
