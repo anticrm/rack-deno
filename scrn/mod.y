@@ -9,7 +9,6 @@ module [
 
   random-bytes: native [len] :Impl/randomBytes
   pbkdf2: native [pass salt iter len digest] :Impl/pbkdf2
-  compare-hash: native [pass hash salt] :Impl/compareHash
   equals-buffer: native [letf right] :Impl/equalsBuffer
 
   hash-with-salt: fn [pass salt] [pbkdf2 pass salt 1000 key-len "sha1"]

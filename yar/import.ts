@@ -21,8 +21,16 @@ const modules = new Map<string, any>()
 export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
   console.log('loading module ' + url.toString() + '...')
   // vm.url = url
-  const buf = await Deno.readFile(url)
-  const code = parse(new TextDecoder().decode(buf))
+  let text: string 
+  if (url.protocol === 'file:') {
+    const buf = await Deno.readFile(url)
+    text = new TextDecoder().decode(buf)
+  } else if (url.protocol.startsWith('http')) {
+    text = await (await fetch("https://deno.land/")).text()
+  } else {
+    throw new Error('unsupported protocol: ' + url.protocol)
+  }
+  const code = parse(text)
   if (code.length !== 3) {
     throw new Error('module must be `module [] []`')
   }
