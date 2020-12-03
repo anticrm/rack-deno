@@ -19,7 +19,7 @@ import {
 
 import { boot } from './boot.ts'
 import { parse } from './parse.ts'
-import { VM, Refinement } from "./vm.ts"
+import { VM, PC, Refinement } from "./vm.ts"
 import { importModule } from './import.ts'
 import { Suspend, Subscription } from './async.ts'
 
@@ -65,6 +65,63 @@ Deno.test('should execute', () => {
 })
 
 Deno.test('should execute', () => {
+  const x = parse('gt 7 8 gt 8 7 eq 7 7 eq 7 8')
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  const ctx = new PC(vm, x)
+  assertEquals(ctx.next(), false)
+  assertEquals(ctx.next(), true)
+  assertEquals(ctx.next(), true)
+  assertEquals(ctx.next(), false)
+})
+
+Deno.test('should execute', () => {
+  const x = parse('1 > 2 4 > 3 5 = 5 6 = 7')
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  const ctx = new PC(vm, x)
+  assertEquals(ctx.next(), false)
+  assertEquals(ctx.next(), true)
+  assertEquals(ctx.next(), true)
+  assertEquals(ctx.next(), false)
+})
+
+Deno.test('should execute', () => {
+  const x = parse('1 = 20')
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  assertEquals(vm.exec(x), false)
+})
+
+Deno.test('should execute', () => {
+  const x = parse('1 = 1')
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  assertEquals(vm.exec(x), true)
+})
+
+Deno.test('should execute', () => {
+  const x = parse('1 + 1')
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  assertEquals(vm.exec(x), 2)
+})
+
+Deno.test('should execute', () => {
+  const x = parse('1 + 2 * 3')
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  assertEquals(vm.exec(x), 9)
+})
+
+Deno.test('should execute', () => {
+  const x = parse('1 + (2 * 3)')
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  assertEquals(vm.exec(x), 7)
+})
+
+Deno.test('should execute', () => {
   const x = parse('x: fn [n] [add n 10] x 5')
   const vm = new VM(); boot(vm)
   vm.bind(x)
@@ -101,6 +158,13 @@ Deno.test('should execute', () => {
 
 Deno.test('should execute', () => {
   const x = parse('fib: fn [n] [either gt n 1 [add fib sub n 2 fib sub n 1] [n]] fib 20')
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  assertEquals(vm.exec(x), 6765)
+})
+
+Deno.test('should execute', () => {
+  const x = parse('fib: fn [n] [either n > 1 [(fib n - 2) + (fib n - 1)] [n]] fib 20')
   const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 6765)
@@ -241,3 +305,39 @@ Deno.test('should execute', async () => {
   await (suspend.resume as unknown as Promise<void>)
   assertEquals(read, 32)
 })
+
+
+Deno.test('should execute', async () => {
+  const x = parse(
+    `
+    user-auth: fn [auth] [
+      x: split auth " "
+      verify: proc [/in /out] [either in = pair/1 [out 1] [throw "key and secret does not match"]]
+      either x/0 = "Basic" [
+        pair: split debase x/1 ":"
+        pipe write "Y" verify
+      ] [
+        throw "expecting Basic authorization"
+      ]
+    ]
+    user-auth "Basic WDpZ"
+    `    
+  )
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  const suspend: Suspend = vm.exec(x)
+  let read: any
+  suspend.out.subscribe({
+    onNext(t: any) {
+      read = t
+    },
+    onSubscribe(s: Subscription): void {},
+    onError(e: Error): void {},
+    onComplete(): void {
+      console.log('on complete here!')
+    }
+  })
+  await (suspend.resume as unknown as Promise<void>)
+  assertEquals(read, 1)
+})
+

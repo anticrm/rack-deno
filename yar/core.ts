@@ -17,6 +17,8 @@ import { VM, Context, Code, Proc, CodeItem, Word, Bound, bind, bindDictionary, P
 import { parse } from './parse.ts'
 import { Publisher, Subscription, Suspend, Subscriber } from './async.ts'
 
+import { Base64 } from "https://deno.land/x/bb64/mod.ts"
+
 function createModule() {
   return { 
     add (x: number, y: number): number {
@@ -258,6 +260,18 @@ function createModule() {
     
     print(this: Context, message: string) {
       console.log('PRINT', message)
+    },
+
+    split(this: Context, str: string, delim: string) {
+      return str.split(delim)
+    },
+
+    base(this: Context, str: string) {
+      return Base64.fromString(str).toString()
+    },
+
+    debase(this: Context, str: string) {
+      return Base64.fromBase64String(str).toString()
     }
 
   }
@@ -270,6 +284,12 @@ mul: native [x y] :core/mul
 
 gt: native [x y] :core/gt
 eq: native [x y] :core/eq
+
++: native-infix :core/add
+-: native-infix :core/sub
+*: native-infix :core/mul
+=: native-infix :core/eq
+>: native-infix :core/gt
 
 fn: native [params code] :core/fn
 proc: native [params code] :core/proc
@@ -284,6 +304,11 @@ print: native [message] :core/print
 pipe: native [left right] :core/pipe
 write: proc [value /out] [out value]
 passthrough: proc [/in /out] [out in]
+
+split: native [string delim] :core/split
+
+base: native [string] :core/base
+debase: native [string] :core/debase
 `
 
 export default function (vm: VM) {

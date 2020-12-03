@@ -24,29 +24,25 @@ function native(pc: PC): Proc {
   const impl = pc.next() as Function
 
   return (pc: PC): any => {
-    //const promises = params.map(param => pc.next())
-    //const values = await Promise.all(promises)
-
     const values: any[] = []
     for (let i = 0; i < params.length; i++) {
       values.push(pc.next())
     }
-
     return impl.apply(pc, values)
   }
 }
 
-// async function nativeInfix(pc: PC) {
-//   const params = await pc.next() as Code
-//   const impl = await pc.next() as Function
+function nativeInfix(pc: PC) {
+  const impl = pc.next() as Function
 
-//   return (pc: PC, first: any, second: any): any => {
-//     const values = [first, second]
-//     return impl.apply(pc, values)
-//   }
-// }
+  return (pc: PC): any => {
+    const values = [pc.vm.result, pc.nextNoInfix()]
+    return impl.apply(pc, values)
+  }
+}
 
 export function boot(vm: VM) {
   vm.dictionary['native'] = native
+  vm.dictionary['native-infix'] = nativeInfix
   coreModule(vm)
 }

@@ -8,5 +8,5 @@ module [
 ] [
   deploy: native [id module] :Impl/deploy
 
-  http/expose :do [/requestBody "text/plain" /responseBody "application/json"]
+  http/expose :do "/do" [/query do] 
 ]

@@ -67,11 +67,11 @@ export class Word extends CodeItem {
         if (f === undefined) {
           throw new Error('nothing when read ' + this.sym)
         }
-        if (this.infix) {
-          return f(pc, pc.vm.result, pc.nextNoInfix())
-        } else {
+        // if (this.infix) {
+        //   return f(pc, pc.vm.result, pc.nextNoInfix())
+        // } else {
           return typeof f === 'function' ? f(pc) : f
-        }
+        // }
       case WordKind.Get:
         return this.bound.get(this.sym)
       default: 
@@ -111,17 +111,19 @@ export class Path extends CodeItem {
 }
 
 export class Brackets extends CodeItem {
+  private code: Code
 
-  constructor (code: CodeItem[]) {
-    super ()
+  constructor (code: Code) {
+    super()
+    this.code = code
   }
 
   bind(f: BindFactory) {
-    throw new Error('not implemented')
+    bind(this.code, f)
   }
 
   exec (pc: PC): any {
-    throw new Error('not implemented')
+    return pc.vm.exec(this.code)
   }
 }
 
@@ -283,4 +285,23 @@ export class PC {
 
 export interface Context {
   vm: VM
+}
+
+// U T I L S
+
+export function blockOfRefinements(code: Code) {
+  const result = { default: [] } as { [key: string]: CodeItem[] }
+  let values = result.default
+  for (let i = 0; i < code.length; i++) {
+    if (code[i] instanceof Refinement) {
+      const kind = (code[i] as Refinement).ident
+      values = result[kind]
+      if (values === undefined) {
+        result[kind] = values = []
+      }
+    } else {
+      values.push(code[i])
+    }
+  }
+  return result
 }
