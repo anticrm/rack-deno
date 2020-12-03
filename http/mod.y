@@ -1,5 +1,5 @@
 module [
   Impl-TypeScript: "./mod.ts"
 ] [
-  expose: native [fn path params] :Impl/expose
+  expose: native [fn path params /auth auth] :Impl/expose
 ]

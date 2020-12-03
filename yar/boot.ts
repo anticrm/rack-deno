@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-import { PC, Code, Proc, VM } from "./vm.ts"
+import { PC, Code, Proc, VM, ProcFunctions } from "./vm.ts"
 import coreModule from "./core.ts"
 
 // import asyncModule, { nativeAsync } from './async.ts'
@@ -23,26 +23,38 @@ function native(pc: PC): Proc {
   const params = pc.next() as Code
   const impl = pc.next() as Function
 
-  return (pc: PC): any => {
+  const f = { 
+    __params: 5,
+  };
+
+  (f as unknown as ProcFunctions).default = (pc: PC): any => {
     const values: any[] = []
     for (let i = 0; i < params.length; i++) {
       values.push(pc.next())
     }
     return impl.apply(pc, values)
   }
+
+  return f
 }
 
 function nativeInfix(pc: PC) {
   const impl = pc.next() as Function
 
-  return (pc: PC): any => {
+  const f = { 
+    __params: 5,
+  };
+
+  (f as unknown as ProcFunctions).default = (pc: PC): any => {
     const values = [pc.vm.result, pc.nextNoInfix()]
     return impl.apply(pc, values)
   }
+
+  return f
 }
 
 export function boot(vm: VM) {
-  vm.dictionary['native'] = native
-  vm.dictionary['native-infix'] = nativeInfix
+  vm.dictionary['native'] = { __params: 5, default: native }
+  vm.dictionary['native-infix'] = { __params: 5, default: nativeInfix }
   coreModule(vm)
 }

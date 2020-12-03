@@ -173,8 +173,8 @@ Deno.test('should execute', () => {
 Deno.test('should import module', async () => {
   const vm = new VM(); boot(vm)
   const mod = await importModule(vm, 'mem', new URL('../mem/mod.y', import.meta.url))
-  assertEquals(typeof mod.set, 'function')
-  assertEquals(typeof mod.get, 'function')
+  assertEquals(typeof mod.set, 'object')
+  assertEquals(typeof mod.get, 'object')
   mod.Impl.stop()
 })
 

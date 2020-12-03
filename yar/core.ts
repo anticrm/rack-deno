@@ -13,11 +13,15 @@
 // limitations under the License.
 //
 
-import { VM, Context, Code, Proc, CodeItem, Word, Bound, bind, bindDictionary, PC, Refinement } from './vm.ts'
+import { VM, Context, Code, Proc, CodeItem, Word, Bound, bind, blockOfRefinements, PC, Refinement, ProcFunctions } from './vm.ts'
 import { parse } from './parse.ts'
 import { Publisher, Subscription, Suspend, Subscriber } from './async.ts'
 
 import { Base64 } from "https://deno.land/x/bb64/mod.ts"
+
+function createProc(_default: (pc: PC) => any): Proc & ProcFunctions {
+  return { __params: 5, default: _default} as unknown as Proc & ProcFunctions
+}
 
 function createModule() {
   return { 
@@ -102,7 +106,11 @@ function createModule() {
 
       const vm = this.vm
 
-      return (pc: PC): any => {
+      const f = { 
+        __params: 5,
+      };
+
+      (f as unknown as ProcFunctions).default = (pc: PC): any => {
         const stack: any[] = Array(stackSize)
         for (let i = 0; i < stackParams; i++) {
           stack[i] = pc.next()
@@ -119,7 +127,7 @@ function createModule() {
           }
           if (sym === 'out') {
             return {
-              get: (sym: string): any => (pc: PC): any => out.write(pc.next()),
+              get: (sym: string): any => createProc((pc: PC): any => out.write(pc.next())),
               set: (sym: string, value: any) => { throw new Error('out is read only') }
             }
           }
@@ -154,9 +162,30 @@ function createModule() {
           in: _in,
         }  
       }
+
+      return f
     },
     
     fn (this: Context, params: Code, code: Code): Proc {
+
+      // const ref = blockOfRefinements(params)
+      
+      // let alternatives = 0
+      // let defaults = 0
+      // let locals = 0
+      // for (const key in ref) {
+      //   switch(key) {
+      //     case 'default':
+      //       defaults = ref[key].length
+      //       break
+      //     case 'locals':
+      //       locals = ref[key].length
+      //       break
+      //     default: 
+      //       alternatives++
+      //       break
+      //   }
+      // }
 
       const offsets: { [key: string]: number } = {}
 
@@ -201,7 +230,11 @@ function createModule() {
 
       const locals = stackSize - stackParams
 
-      return (pc: PC): any => {
+      const f = { 
+        __params: 5,
+      };
+
+      (f as unknown as ProcFunctions).default = (pc: PC): any => {
         for (let i = 0; i < stackParams; i++) {
           vm.stack.push(pc.next())
         }
@@ -212,6 +245,8 @@ function createModule() {
         vm.stack.length = vm.stack.length - stackSize
         return x
       }
+
+      return f
     },
 
     pipe(this: Context, left: Suspend, right: Suspend): Suspend {

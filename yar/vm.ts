@@ -14,7 +14,8 @@
 //
 
 type Dict = { [key: string]: any }
-export type Proc = (pc: PC) => any
+export type ProcFunctions = { [key: string]: (pc: PC) => any }
+export type Proc = { __params: any }
 
 export enum WordKind {
   Norm = 0,
@@ -70,8 +71,13 @@ export class Word extends CodeItem {
         // if (this.infix) {
         //   return f(pc, pc.vm.result, pc.nextNoInfix())
         // } else {
-          return typeof f === 'function' ? f(pc) : f
+        // return typeof f === 'function' ? f(pc) : f
         // }
+        if (typeof f === 'object' && f.hasOwnProperty('__params')) {
+          return (f as ProcFunctions).default(pc)
+        } else {
+          return f
+        }
       case WordKind.Get:
         return this.bound.get(this.sym)
       default: 
