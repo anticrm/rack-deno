@@ -37,6 +37,16 @@ export abstract class CodeItem {
 
 export type Code = CodeItem[]
 
+function checkReturn(result: any, pc: PC): any {
+  if (typeof result === 'function') {
+    return result(pc)
+  } else if (typeof result === 'object' && result.hasOwnProperty('__params')) {
+    return (result as ProcFunctions).default(pc)
+  } else {
+    return result
+  }
+}
+
 export class Word extends CodeItem {
   private kind: WordKind
   readonly sym: string
@@ -68,16 +78,7 @@ export class Word extends CodeItem {
         if (f === undefined) {
           throw new Error('nothing when read ' + this.sym)
         }
-        // if (this.infix) {
-        //   return f(pc, pc.vm.result, pc.nextNoInfix())
-        // } else {
-        // return typeof f === 'function' ? f(pc) : f
-        // }
-        if (typeof f === 'object' && f.hasOwnProperty('__params')) {
-          return (f as ProcFunctions).default(pc)
-        } else {
-          return f
-        }
+        return checkReturn(f, pc)
       case WordKind.Get:
         return this.bound.get(this.sym)
       default: 
@@ -111,7 +112,7 @@ export class Path extends CodeItem {
       default:
         // throw new Error('should not be here ' + this.path.toString())
         const result = this.path.slice(1).reduce((acc, val) => acc[val], this.bound.get(this.path[0]))
-        return typeof result === 'function' ? result(pc) : result
+        return checkReturn(result, pc)
     }
   }
 }
@@ -179,7 +180,7 @@ export class Refinement extends CodeItem {
   }
 
   exec (pc: PC): any {
-    throw new Error('refinement execution')
+    throw new Error('refinement execution ' + this.ident)
   }
 
 }

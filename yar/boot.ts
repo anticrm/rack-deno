@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-import { PC, Code, Proc, VM, ProcFunctions } from "./vm.ts"
+import { PC, Code, Proc, VM, ProcFunctions, blockOfRefinements } from "./vm.ts"
 import coreModule from "./core.ts"
 
 // import asyncModule, { nativeAsync } from './async.ts'
@@ -21,19 +21,45 @@ import { parse } from "./parse.ts"
 
 function native(pc: PC): Proc {
   const params = pc.next() as Code
-  const impl = pc.next() as Function
+  const impl = pc.next() as { [key: string]: Function }
 
-  const f = { 
-    __params: 5,
-  };
+  const ref = blockOfRefinements(params)
 
-  (f as unknown as ProcFunctions).default = (pc: PC): any => {
-    const values: any[] = []
-    for (let i = 0; i < params.length; i++) {
-      values.push(pc.next())
+  const defaults = ref.default.length
+  const alternatives: string[] = []
+  for (const key in ref) {
+    if (key !== 'default') {
+      alternatives.push(key)
+      break
     }
-    return impl.apply(pc, values)
   }
+
+  const f = {
+    __params: 5,
+  }
+
+  function create(alt: number) {
+    const altStackSize = alt < 0 ? 0 : ref[alternatives[alt]].length
+    const f = alt < 0 ? (typeof impl === 'function' ? impl : impl.default) : impl[alternatives[alt]]
+
+    return (pc: PC): any => {
+      //console.log('executing defaults ' + defaults + ' alts ' + altStackSize)
+      const values: any[] = []
+      for (let i = 0; i < defaults; i++) {
+        values.push(pc.next())
+      }
+      for (let i = 0; i < altStackSize; i++) {
+        values.push(pc.next())
+      }
+      return f.apply(pc, values)
+  
+    }
+  }
+
+  (f as unknown as ProcFunctions).default = create(-1)
+  alternatives.forEach((alter, i) => {
+    (f as unknown as ProcFunctions)[alter] = create(i)
+  })
 
   return f
 }

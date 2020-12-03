@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-import { Context, Proc, VM, PC, Code, Refinement, Word, Const } from '../yar/vm.ts'
+import { Context, Proc, VM, PC, Code, Refinement, Word, Const, ProcFunctions } from '../yar/vm.ts'
 import { serve, ServerRequest } from "https://deno.land/std/http/server.ts"
 
 enum Extract {
@@ -35,6 +35,45 @@ export default async () => {
 
   console.log('starting http server...')
   const server = serve({ hostname: "0.0.0.0", port: 8086 })
+
+
+  function expose(this: Context, proc: Proc, path: string, params: Code, auth: Proc) {
+    let kind = Extract.Unknown
+    const extractors: any[] = []
+  
+    params.forEach(param => {
+      if (param instanceof Refinement) {
+        if (param.ident === 'query') {
+          kind = Extract.Query
+        } else {
+          throw new Error('unsupported param kind: ' + param.ident)
+        }
+      } else if (param instanceof Word) {
+        extractors.push(extractFactory[kind](param.sym))
+      } else {
+        console.log(param)
+        throw new Error('unsupported param kind')
+      }
+    })
+
+    const procFunc = typeof proc === 'function' ? proc : (proc as ProcFunctions).default
+    const authFunc = (auth !== undefined) ?
+      typeof auth === 'function' ? auth : (auth as ProcFunctions).default : undefined
+
+    const launch = async (request: ServerRequest): Promise<any> => {
+      const code = extractors.map(extractor => extractor(request))
+      const pc = new PC(this.vm, code)
+      if (authFunc !== undefined) {
+        const authHeader = request.headers.get('authorization')
+        const code = [new Const(authHeader)]
+        const pc = new PC(this.vm, code)
+        authFunc(pc)
+      }
+      return procFunc(pc)
+    }
+  
+    procs.set(path, launch)
+  }
 
   return { 
     async run() {    
@@ -58,34 +97,10 @@ export default async () => {
       server.close()
     },
 
-    expose(this: Context, proc: Proc, path: string, params: Code) {
-      let kind = Extract.Unknown
-      const extractors: any[] = []
-    
-      params.forEach(param => {
-        if (param instanceof Refinement) {
-          if (param.ident === 'query') {
-            kind = Extract.Query
-          } else {
-            throw new Error('unsupported param kind: ' + param.ident)
-          }
-        } else if (param instanceof Word) {
-          extractors.push(extractFactory[kind](param.sym))
-        } else {
-          console.log(param)
-          throw new Error('unsupported param kind')
-        }
-      })
-    
-      const launch = async (request: ServerRequest): Promise<any> => {
-        const code = extractors.map(extractor => extractor(request))
-        const pc = new PC(this.vm, code)
-        return proc(pc)
-      }
-    
-      procs.set(path, launch)
-    }    
-
+    expose: {
+      default: expose,
+      auth: expose,
+    }
   }
 
 }
