@@ -168,57 +168,33 @@ function createModule() {
     
     fn (this: Context, params: Code, code: Code): Proc {
 
-      // const ref = blockOfRefinements(params)
-      
-      // let alternatives = 0
-      // let defaults = 0
-      // let locals = 0
-      // for (const key in ref) {
-      //   switch(key) {
-      //     case 'default':
-      //       defaults = ref[key].length
-      //       break
-      //     case 'locals':
-      //       locals = ref[key].length
-      //       break
-      //     default: 
-      //       alternatives++
-      //       break
-      //   }
-      // }
 
-      const offsets: { [key: string]: number } = {}
+      const ref = blockOfRefinements(params)
+      if (ref.local === undefined) {
+        ref.local = []
+      }
 
-      // count stack parameters
-      let stackParams = 0
-      let stackSize = 0
-      let kind = 'default'
-
-      let pos = 0
-
-      for (let i = 0; i < params.length; i++) {
-        if (params[i] instanceof Refinement) {
-          kind = (params[i] as Refinement).ident
-        } else switch (kind) {
-          case 'default':
-            stackParams++
-          case 'local':
-            stackSize++
-            const word = params[i] as Word
-            offsets[word.sym] = pos++
-            break
-          default: 
-            throw new Error('unknown kind')
+      const defaults = ref.default.length
+      const locals = ref.local.length
+      const alternatives: string[] = []
+      for (const key in ref) {
+        if (key !== 'default' && key !== 'local') {
+          alternatives.push(key)
+          break
         }
       }
 
+      const stackSize = defaults + locals + alternatives.length
+      const offsets: { [key: string]: number } = {}
+      ref.default.forEach((val, i) => { offsets[(val as Word).sym] = i - stackSize })
+      ref.local.forEach((val, i) => { offsets[(val as Word).sym] = i + defaults - stackSize })
+      alternatives.forEach((alter, i) => {
+        offsets[alter] = i + defaults + locals - stackSize
+        ref[alter].forEach((val, i) => { offsets[(val as Word).sym] = i - stackSize - ref[alter].length })
+      })
+
       const vm = this.vm
 
-      for (const sym in offsets) {
-        const ofs = offsets[sym]
-        offsets[sym] = ofs - stackSize
-      }
-    
       bind(code, (sym: string): Bound | undefined => {
         if (offsets[sym]) {
           return { 
@@ -228,23 +204,46 @@ function createModule() {
         }
       })
 
-      const locals = stackSize - stackParams
-
-      const f = { 
+      const f = {
         __params: 5,
-      };
-
-      (f as unknown as ProcFunctions).default = (pc: PC): any => {
-        for (let i = 0; i < stackParams; i++) {
-          vm.stack.push(pc.next())
-        }
-        for (let i = 0; i < locals; i++) {
-          vm.stack.push(undefined)
-        }
-        const x = vm.exec(code)
-        vm.stack.length = vm.stack.length - stackSize
-        return x
       }
+
+      function create(alt: number) {
+        const altStackSize = alt < 0 ? 0 : ref[alt].length;
+        const altFlags: boolean[] = []
+        for (let i = 0; i < alternatives.length; i++) {
+          altFlags.push(i === alt)
+        }
+
+        return (pc: PC): any => {
+
+          const altBase = vm.stack.length
+          const base = altBase + altStackSize
+
+          let pos = base
+          for (let i = 0; i < defaults; i++) {
+            vm.stack[pos++] = pc.next()
+          }
+          for (let i = 0; i < locals; i++) {
+            vm.stack[pos++] = undefined
+          }
+          for (let i = 0; i < alternatives.length; i++) {
+            vm.stack[pos++] = altFlags[i]
+          }
+          for (let i = 0; i < altStackSize; i++) {
+            vm.stack[altBase + i] = pc.next()
+          }
+
+          const x = vm.exec(code)
+          vm.stack.length = altBase
+          return x
+        }
+      }
+
+      (f as unknown as ProcFunctions).default = create(-1)
+      alternatives.forEach((alter, i) => {
+        (f as unknown as ProcFunctions)[alter] = create(i)
+      })
 
       return f
     },
