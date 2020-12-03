@@ -209,7 +209,7 @@ function createModule() {
       }
 
       function create(alt: number) {
-        const altStackSize = alt < 0 ? 0 : ref[alt].length;
+        const altStackSize = alt < 0 ? 0 : ref[alternatives[alt]].length;
         const altFlags: boolean[] = []
         for (let i = 0; i < alternatives.length; i++) {
           altFlags.push(i === alt)

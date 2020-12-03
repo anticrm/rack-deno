@@ -193,6 +193,14 @@ Deno.test('should execute', () => {
 })
 
 Deno.test('should execute', () => {
+  const x = parse('x: fn [n /extra y] [either extra [add n y] [n]] add x 10 x/extra 10 20')
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  const result = vm.exec(x)
+  assertEquals(result, 40)
+})
+
+Deno.test('should execute', () => {
   const x = parse('x: 10 p: fn [/local x] [x: 5 x] add p x')
   const vm = new VM(); boot(vm)
   vm.bind(x)
