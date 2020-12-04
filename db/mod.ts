@@ -41,7 +41,7 @@ export default async () => {
           const result = await db.collection(collection).findOne(dict)
           if (result)
             out.write(result)
-          out.done()
+          out.done(result)
         },
         out
       }
@@ -56,7 +56,7 @@ export default async () => {
           this.vm.exec(data)
           const result = await db.collection(collection).insert(dict)
           out.write(result)
-          out.done()
+          out.done(result)
         },
         out
       }

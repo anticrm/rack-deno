@@ -13,11 +13,15 @@
 // limitations under the License.
 //
 
-import { VM, Context, Code, Proc, CodeItem, Word, Bound, bind, bindDictionary, PC, Refinement } from './vm.ts'
+import { VM, Context, Code, Proc, CodeItem, Word, Bound, bind, blockOfRefinements, PC, Refinement, ProcFunctions } from './vm.ts'
 import { parse } from './parse.ts'
 import { Publisher, Subscription, Suspend, Subscriber } from './async.ts'
 
 import { Base64 } from "https://deno.land/x/bb64/mod.ts"
+
+function createProc(_default: (pc: PC) => any): Proc & ProcFunctions {
+  return { __params: 5, default: _default} as unknown as Proc & ProcFunctions
+}
 
 function createModule() {
   return { 
@@ -102,7 +106,11 @@ function createModule() {
 
       const vm = this.vm
 
-      return (pc: PC): any => {
+      const f = { 
+        __params: 5,
+      };
+
+      (f as unknown as ProcFunctions).default = (pc: PC): any => {
         const stack: any[] = Array(stackSize)
         for (let i = 0; i < stackParams; i++) {
           stack[i] = pc.next()
@@ -119,7 +127,7 @@ function createModule() {
           }
           if (sym === 'out') {
             return {
-              get: (sym: string): any => (pc: PC): any => out.write(pc.next()),
+              get: (sym: string): any => createProc((pc: PC): any => out.write(pc.next())),
               set: (sym: string, value: any) => { throw new Error('out is read only') }
             }
           }
@@ -134,7 +142,7 @@ function createModule() {
           resume: async (): Promise<void> => {
             if (!input) {
               const result = vm.exec(code)
-              out.done()
+              out.done(result)
               return result
             } else {
               return new Promise((resolve, reject) => {
@@ -145,7 +153,7 @@ function createModule() {
                     vm.exec(code)
                   },
                   onError(e: Error): void {},
-                  onComplete(): void { resolve() },          
+                  onComplete(res: any): void { resolve(res) },          
                 })
               })
             }
@@ -154,42 +162,39 @@ function createModule() {
           in: _in,
         }  
       }
+
+      return f
     },
     
     fn (this: Context, params: Code, code: Code): Proc {
 
-      const offsets: { [key: string]: number } = {}
 
-      // count stack parameters
-      let stackParams = 0
-      let stackSize = 0
-      let kind = 'default'
+      const ref = blockOfRefinements(params)
+      if (ref.local === undefined) {
+        ref.local = []
+      }
 
-      let pos = 0
-
-      for (let i = 0; i < params.length; i++) {
-        if (params[i] instanceof Refinement) {
-          kind = (params[i] as Refinement).ident
-        } else switch (kind) {
-          case 'default':
-            stackParams++
-          case 'local':
-            stackSize++
-            const word = params[i] as Word
-            offsets[word.sym] = pos++
-            break
-          default: 
-            throw new Error('unknown kind')
+      const defaults = ref.default.length
+      const locals = ref.local.length
+      const alternatives: string[] = []
+      for (const key in ref) {
+        if (key !== 'default' && key !== 'local') {
+          alternatives.push(key)
+          break
         }
       }
 
+      const stackSize = defaults + locals + alternatives.length
+      const offsets: { [key: string]: number } = {}
+      ref.default.forEach((val, i) => { offsets[(val as Word).sym] = i - stackSize })
+      ref.local.forEach((val, i) => { offsets[(val as Word).sym] = i + defaults - stackSize })
+      alternatives.forEach((alter, i) => {
+        offsets[alter] = i + defaults + locals - stackSize
+        ref[alter].forEach((val, i) => { offsets[(val as Word).sym] = i - stackSize - ref[alter].length })
+      })
+
       const vm = this.vm
 
-      for (const sym in offsets) {
-        const ofs = offsets[sym]
-        offsets[sym] = ofs - stackSize
-      }
-    
       bind(code, (sym: string): Bound | undefined => {
         if (offsets[sym]) {
           return { 
@@ -199,19 +204,48 @@ function createModule() {
         }
       })
 
-      const locals = stackSize - stackParams
-
-      return (pc: PC): any => {
-        for (let i = 0; i < stackParams; i++) {
-          vm.stack.push(pc.next())
-        }
-        for (let i = 0; i < locals; i++) {
-          vm.stack.push(undefined)
-        }
-        const x = vm.exec(code)
-        vm.stack.length = vm.stack.length - stackSize
-        return x
+      const f = {
+        __params: 5,
       }
+
+      function create(alt: number) {
+        const altStackSize = alt < 0 ? 0 : ref[alternatives[alt]].length;
+        const altFlags: boolean[] = []
+        for (let i = 0; i < alternatives.length; i++) {
+          altFlags.push(i === alt)
+        }
+
+        return (pc: PC): any => {
+
+          const altBase = vm.stack.length
+          const base = altBase + altStackSize
+
+          let pos = base
+          for (let i = 0; i < defaults; i++) {
+            vm.stack[pos++] = pc.next()
+          }
+          for (let i = 0; i < locals; i++) {
+            vm.stack[pos++] = undefined
+          }
+          for (let i = 0; i < alternatives.length; i++) {
+            vm.stack[pos++] = altFlags[i]
+          }
+          for (let i = 0; i < altStackSize; i++) {
+            vm.stack[altBase + i] = pc.next()
+          }
+
+          const x = vm.exec(code)
+          vm.stack.length = altBase
+          return x
+        }
+      }
+
+      (f as unknown as ProcFunctions).default = create(-1)
+      alternatives.forEach((alter, i) => {
+        (f as unknown as ProcFunctions)[alter] = create(i)
+      })
+
+      return f
     },
 
     pipe(this: Context, left: Suspend, right: Suspend): Suspend {
@@ -225,8 +259,8 @@ function createModule() {
           (right.in as Publisher<any>).write(t)
         },
         onError(e: Error): void {},
-        onComplete(): void {
-          (right.in as Publisher<any>).done()
+        onComplete(res: any): void {
+          (right.in as Publisher<any>).done(res)
         },
       })
     

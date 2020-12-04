@@ -121,28 +121,28 @@ Deno.test('should execute', () => {
   assertEquals(vm.exec(x), 7)
 })
 
-Deno.test('should execute', () => {
+Deno.test('should execute `x: fn [n] [add n 10] x 5`', () => {
   const x = parse('x: fn [n] [add n 10] x 5')
   const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 15)
 })
 
-Deno.test('should execute', () => {
+Deno.test('should execute `either gt 2 1 [5] [6]`', () => {
   const x = parse('either gt 2 1 [5] [6]')
   const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 5)
 })
 
-Deno.test('should execute', () => {
+Deno.test('should execute adder', () => {
   const x = parse('fib: fn [n] [either gt n 1 [add n n] [n]] fib 10')
   const vm = new VM(); boot(vm)
   vm.bind(x)
   assertEquals(vm.exec(x), 20)
 })
 
-Deno.test('should execute', () => {
+Deno.test('should execute fib #1', () => {
   const x = parse('fib: fn [n] [either gt n 1 [add n fib sub n 1] [n]] fib 100')
   const vm = new VM(); boot(vm)
   vm.bind(x)
@@ -173,8 +173,8 @@ Deno.test('should execute', () => {
 Deno.test('should import module', async () => {
   const vm = new VM(); boot(vm)
   const mod = await importModule(vm, 'mem', new URL('../mem/mod.y', import.meta.url))
-  assertEquals(typeof mod.set, 'function')
-  assertEquals(typeof mod.get, 'function')
+  assertEquals(typeof mod.set, 'object')
+  assertEquals(typeof mod.get, 'object')
   mod.Impl.stop()
 })
 
@@ -190,6 +190,14 @@ Deno.test('should execute', () => {
   const vm = new VM(); boot(vm)
   vm.bind(x)
   assertThrowsAsync(() => vm.exec(x))
+})
+
+Deno.test('should execute', () => {
+  const x = parse('x: fn [n /extra y] [either extra [add n y] [n]] add x 10 x/extra 10 20')
+  const vm = new VM(); boot(vm)
+  vm.bind(x)
+  const result = vm.exec(x)
+  assertEquals(result, 40)
 })
 
 Deno.test('should execute', () => {

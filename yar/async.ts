@@ -17,6 +17,7 @@ export class Publisher<T> {
   private subscriber?: Subscriber<T>
   private queue: any[] = []
   private close = false
+  private completeResult: any
 
   subscribe(s: Subscriber<T>): void {
     this.subscriber = s
@@ -24,7 +25,7 @@ export class Publisher<T> {
     this.queue.forEach(item => s.onNext(item))
     this.queue = []
     if (this.close) {
-      this.subscriber.onComplete()
+      this.subscriber.onComplete(this.completeResult)
     }
   }
 
@@ -35,11 +36,12 @@ export class Publisher<T> {
       this.subscriber.onNext(val)
   }
 
-  done () {
+  done (res: any) {
     if (this.subscriber) {
-      this.subscriber.onComplete()
+      this.subscriber.onComplete(res)
     } else {
       this.close = true
+      this.completeResult = res
     }
   }
 }
@@ -48,7 +50,7 @@ export interface Subscriber<T> {
   onSubscribe(s: Subscription): void
   onNext(t: T): void 
   onError(e: Error): void 
-  onComplete(): void
+  onComplete(result: any): void
 }
 
 export interface Subscription {
