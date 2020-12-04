@@ -15,7 +15,8 @@
 
 import { connect, Redis } from "https://deno.land/x/redis/mod.ts"
 import { stripColor } from "https://deno.land/std@0.78.0/fmt/colors.ts"
-import { Context } from '../y/vm.ts'
+import { Context } from '../yar/vm.ts'
+import { Publisher, Subscription } from '../yar/async.ts'
 
 export default async () => {
 
@@ -26,12 +27,37 @@ export default async () => {
   })
 
   return { 
-    set(this: Context, key: string, value: string) {
-      return redis.set(key, value)
+    get(this: Context, key: string) {
+      const out = new Publisher()
+      return {
+        resume: async () => {
+          const value = await redis.get(key)
+          out.write(value)
+          out.done(value)
+        },
+        out
+      }      
     },
   
-    get(this: Context, key: string) {
-      return redis.get(key)
+    set(this: Context, key: string) {
+      const out = new Publisher()
+      const _in = new Publisher()
+      return {
+        resume: async () => {
+          return new Promise((resolve, reject) => {
+            _in.subscribe({
+              onSubscribe(s: Subscription): void {},
+              onNext(t: any): void {
+                redis.set(key, t).then(resolve).catch(reject)
+              },
+              onError(e: Error): void {},
+              onComplete(res: any): void {},          
+            })
+          })
+        },
+        out,
+        in: _in
+      }      
     },
 
     stop () {

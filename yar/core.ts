@@ -324,6 +324,7 @@ eq: native [x y] :core/eq
 *: native-infix :core/mul
 =: native-infix :core/eq
 >: native-infix :core/gt
+|: native-infix :core/pipe
 
 fn: native [params code] :core/fn
 proc: native [params code] :core/proc

@@ -1,6 +1,6 @@
 module [
   Impl-TypeScript: "./mod.ts"
 ] [
-  set: native [key value] :Impl/set
+  set: native [key] :Impl/set
   get: native [key] :Impl/get
 ]
