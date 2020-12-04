@@ -142,7 +142,7 @@ function createModule() {
           resume: async (): Promise<void> => {
             if (!input) {
               const result = vm.exec(code)
-              out.done()
+              out.done(result)
               return result
             } else {
               return new Promise((resolve, reject) => {
@@ -153,7 +153,7 @@ function createModule() {
                     vm.exec(code)
                   },
                   onError(e: Error): void {},
-                  onComplete(): void { resolve() },          
+                  onComplete(res: any): void { resolve(res) },          
                 })
               })
             }
@@ -259,8 +259,8 @@ function createModule() {
           (right.in as Publisher<any>).write(t)
         },
         onError(e: Error): void {},
-        onComplete(): void {
-          (right.in as Publisher<any>).done()
+        onComplete(res: any): void {
+          (right.in as Publisher<any>).done(res)
         },
       })
     

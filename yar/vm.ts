@@ -13,6 +13,8 @@
 // limitations under the License.
 //
 
+import { Subscription } from './async.ts'
+
 type Dict = { [key: string]: any }
 export type ProcFunctions = { [key: string]: (pc: PC) => any }
 export type Proc = { __params: any }
@@ -32,7 +34,7 @@ export type Bound = {
 
 export abstract class CodeItem {
   abstract bind(factory: BindFactory): void
-  abstract exec(pc: PC): Promise<any>
+  abstract exec(pc: PC): any
 }
 
 export type Code = CodeItem[]
@@ -40,7 +42,7 @@ export type Code = CodeItem[]
 function checkReturn(result: any, pc: PC): any {
   if (typeof result === 'function') {
     return result(pc)
-  } else if (typeof result === 'object' && result.hasOwnProperty('__params')) {
+  } else if (result && typeof result === 'object' && result.hasOwnProperty('__params')) {
     return (result as ProcFunctions).default(pc)
   } else {
     return result
@@ -180,11 +182,10 @@ export class Refinement extends CodeItem {
   }
 
   exec (pc: PC): any {
-    throw new Error('refinement execution ' + this.ident)
+    return this
   }
 
 }
-
 
 export function bind(code: Code, boundFactory: (sym: string) => Bound | undefined) {
   code.forEach(item => {if (!item.bind) { console.log(item); throw new Error('no bind') } else { return item.bind(boundFactory) }})
@@ -241,8 +242,8 @@ export class VM {
     })
   }
 
-  exec(code: Code, trace = false): any {
-    return new PC(this, code).exec(trace)
+  exec(code: Code): any {
+    return new PC(this, code).exec()
   }
 
 }
@@ -258,9 +259,15 @@ export class PC {
     this.vm = vm
   }
 
+  fetch(): CodeItem {
+    return this.code[this.pc++]
+  }
+
+  back() { --this.pc }
+
   nextNoInfix(): Promise<any> {
-    let result = this.code[this.pc++].exec(this)    
-    if (typeof result === 'object' && typeof (result as any).resume === 'function') {
+    let result = this.fetch().exec(this)    
+    if (result && typeof result === 'object' &&  typeof (result as any).resume === 'function') {
       //console.log('suspend here', result)
       const promise = (result as any).resume() as Promise<void>
       //promise.then((res: any) => { console.log('proc done, ', res)}).catch((err: any) => { console.log ('proc err', err)})
@@ -275,16 +282,20 @@ export class PC {
     return ((this.code[this.pc] as any)?.infix) ? this.nextNoInfix() : result
   }
 
-  exec(trace = false): any {
-    if (trace) {
-      console.log('exec: ', this.code)
-    }
+  hasNext(): boolean {
+    return this.pc < this.code.length
+  }
+
+  exec(): any {
+    // if (trace) {
+    //   console.log('exec: ', this.code)
+    // }
     let result
-    while (this.pc < this.code.length) {
+    while (this.hasNext()) {
       result = this.next()
-      if (trace) {
-        console.log('> ', result)
-      }
+      // if (trace) {
+      //   console.log('> ', result)
+      // }
     }
     return result
   }
@@ -311,4 +322,30 @@ export function blockOfRefinements(code: Code) {
     }
   }
   return result
+}
+
+export async function asyncResult(result: any): Promise<any> {
+  if (typeof result === 'object' && result.resume) {
+    return new Promise((resolve, reject) => {
+      const out: any[] = []
+      result.out.subscribe({
+        onNext(t: any) {
+          out.push(t)
+        },
+        onSubscribe(s: Subscription): void {},
+        onError(e: Error): void {},
+        onComplete(res: any): void {
+          if (out.length === 0) {
+            resolve(res)
+          } else if (out.length === 1) {
+            resolve(out[0])
+          } else {
+            resolve(out)
+          }
+        }
+      })  
+    })
+  } else {
+    return result
+  }
 }
