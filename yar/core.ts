@@ -131,6 +131,12 @@ function createModule() {
               set: (sym: string, value: any) => { throw new Error('out is read only') }
             }
           }
+          if (sym === 'done') {
+            return {
+              get: (sym: string): any => createProc((pc: PC): any => out.done(pc.next())),
+              set: (sym: string, value: any) => { throw new Error('done is read only') }
+            }
+          }
           if (offsets[sym] !== undefined) {
             return {
               get: (sym: string): any => stack[offsets[sym]],
@@ -256,7 +262,7 @@ function createModule() {
       left.out.subscribe({
         onSubscribe(s: Subscription): void {},
         onNext(t: any): void {
-          (right.in as Publisher<any>).write(t)
+          (right.in as Publisher<any>).write(t ?? null)
         },
         onError(e: Error): void {},
         onComplete(res: any): void {

@@ -32,9 +32,17 @@ export default async () => {
       console.log('auth', authFunc)
       return async (request: ServerRequest) => {
         const authHeader = request.headers.get('authorization')
+        if (!authHeader) {
+          throw new Error('authorization required')
+        }
         const code = [new Const(authHeader)]
         const pc = new PC(vm, code)
-        return new Const(await asyncResult(authFunc(pc)))
+
+        const result = authFunc(pc)
+        result.resume = result.resume()
+        // result.resume.then((res: any) => console.log('RESUME', res)).catch((err: Error) => console.log('ERR', err))
+        const ar = await asyncResult(result)
+        return new Const(ar)
       }
     }
   }

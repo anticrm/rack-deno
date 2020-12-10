@@ -58,3 +58,45 @@ Deno.test('should expose `do`', async () => {
 
   http.Impl.stop()
 })
+
+Deno.test('should expose `do` with auth', async () => {
+  const vm = new VM()
+  boot(vm)
+  const http = await importModule(vm, 'http', new URL('../http/mod.y', import.meta.url))
+
+  const x = parse('auth: proc [/out] [out 1] http/expose :do "/test" [/query x /auth :auth]')
+  vm.bind(x)
+  vm.exec(x)
+
+  const res = await superdeno('http://localhost:8086')
+    .get("/test")
+    .query({x: "add 7 8"})
+  assertEquals((res as any).text, "Error: authorization required")
+
+  const res2 = await superdeno('http://localhost:8086')
+    .get("/test")
+    .auth('x', 'y')
+    .query({x: "add 7 8"})
+  assertEquals((res2 as any).text, "15")
+
+  http.Impl.stop()
+})
+
+// Deno.test('node should expose `do` with auth', async () => {
+//   const vm = new VM()
+//   boot(vm)
+//   const rack = await importModule(vm, 'rack', new URL('../rack/mod.y', import.meta.url))
+
+//   const res = await superdeno('http://localhost:8086')
+//     .get("/do")
+//     .query({do: "add 7 8"})
+//   assertEquals((res as any).text, "Error: authorization required")
+
+//   // const res2 = await superdeno('http://localhost:8086')
+//   //   .get("/do")
+//   //   .auth('user', 'path')
+//   //   .query({do: "add 7 8"})
+//   // assertEquals((res2 as any).text, "Error: authorization required")
+
+//   rack.Impl.stop()
+// })

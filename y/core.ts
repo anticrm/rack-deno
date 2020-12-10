@@ -130,9 +130,11 @@ function createModule() {
                     onNext(t: any): void {
                       console.log('onnext: ' + t)
                       inputValueHolder = t
-                      vm.exec(code).then(() => resolve())
+                      vm.exec(code).then(res => resolve(res)).catch(err => reject(err))
                     },
-                    onError(e: Error): void {},
+                    onError(e: Error): void {
+                      reject(e)
+                    },
                     onComplete(): void { console.log('oncomplete'); resolve() },          
                   })
                 })

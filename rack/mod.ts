@@ -28,7 +28,20 @@ export default async (vm: VM) => {
           const url = new URL(module, import.meta.url)
           await (vm as Node).deploy(id, url)
           out.write(true)
-          out.done()
+          out.done(true)
+        },
+        out
+      }
+    },
+
+    exec (this: Context, server: string, code: string) {
+      const out = new Publisher()
+      return { 
+        async resume () {
+          // const response = await fetch('http://localhost:8086/do?do=' + code)
+          // const text = response.text()
+          out.write("text")
+          out.done("text")
         },
         out
       }

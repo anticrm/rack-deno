@@ -243,7 +243,12 @@ export class VM {
   }
 
   exec(code: Code): any {
-    return new PC(this, code).exec()
+    try {
+      return new PC(this, code).exec()
+    } catch (err) {
+      console.log('exec exception: ' + err)
+      throw err
+    }
   }
 
 }

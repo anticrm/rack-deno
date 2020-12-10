@@ -7,6 +7,7 @@ module [
   Impl-TypeScript: "./mod.ts"
 ] [
   deploy: native [id module] :Impl/deploy
+  exec: native [server code] :Impl/exec
 
   verify-key: proc [secret /in /out] [either in = secret [out 1] [throw "key and secret does not match"]]
 
