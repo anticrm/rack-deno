@@ -20,5 +20,5 @@ module [
     ]
   ]
 
-  http/expose :do "/do" [/query do] 
+  http/expose :do "/do" [/query do /auth :user-auth] 
 ]
