@@ -14,15 +14,19 @@
 //
 
 import { connect, Redis } from "https://deno.land/x/redis/mod.ts"
+import { config } from "https://deno.land/x/dotenv/mod.ts"
 import { stripColor } from "https://deno.land/std@0.78.0/fmt/colors.ts"
 import { Context } from '../yar/vm.ts'
 import { Publisher, Subscription } from '../yar/async.ts'
 
+
 export default async () => {
 
   console.log('connecting to redis server')
+  const env = config()
+
   const redis = await connect({
-    hostname: "127.0.0.1",
+    hostname: env.REDIS_SERVER || 'localhost',
     port: 6379
   })
 

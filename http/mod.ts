@@ -15,6 +15,7 @@
 
 import { Context, Proc, VM, PC, Code, Refinement, Word, Const, ProcFunctions, asyncResult, CodeItem } from '../yar/vm.ts'
 import { serve, ServerRequest } from "https://deno.land/std/http/server.ts"
+import {CoreError, STATUS_UNAUTHORIZED} from '../platform/core.ts'
 
 type Extractor = (request: ServerRequest) => Promise<Const>
 
@@ -33,13 +34,12 @@ export default async () => {
       return async (request: ServerRequest) => {
         const authHeader = request.headers.get('authorization')
         if (!authHeader) {
-          throw new Error('authorization required')
+          throw new CoreError(STATUS_UNAUTHORIZED, 'authorization required')
         }
         const code = [new Const(authHeader)]
         const pc = new PC(vm, code)
 
         const result = authFunc(pc)
-        result.resume = result.resume()
         // result.resume.then((res: any) => console.log('RESUME', res)).catch((err: Error) => console.log('ERR', err))
         const ar = await asyncResult(result)
         return new Const(ar)
@@ -78,7 +78,6 @@ export default async () => {
 
     const launch = async (request: ServerRequest): Promise<any> => {
       const code = await Promise.all(extractors.map(extractor => extractor(request)))
-      console.log('code', code)
       const pc = new PC(this.vm, code)
       // if (authFunc !== undefined) {
       //   const authHeader = request.headers.get('authorization')
@@ -98,13 +97,21 @@ export default async () => {
         for await (const request of server) {
           const proc = procs.get(new URL(request.url, base).pathname)
           if (proc) {
-            console.log('proc', proc)
             try {
               const result = await proc(request)
-              request.respond({ status: 200, body: result.toString() })
+              if (typeof result === 'object' && result.resume) {
+                request.respond({ status: 200, body: result.toString() })
+              } else {
+                request.respond({ status: 200, body: result.toString() })
+              }
             } catch (err) {
-              console.log('proc err', err)
-              request.respond({ status: 500, body: err.toString() })
+              console.log(err)
+              if (err instanceof CoreError) {
+                const coreError = err as CoreError
+                request.respond({ status: coreError.getCode(), body: err.toString() })
+              } else {
+                request.respond({ status: 500, body: err.toString() })
+              }
             }
           } else {
             request.respond({ status: 404 })

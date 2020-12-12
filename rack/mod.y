@@ -9,7 +9,7 @@ module [
   deploy: native [id module] :Impl/deploy
   exec: native [server code] :Impl/exec
 
-  verify-key: proc [secret /in /out] [either in = secret [out 1] [throw "key and secret does not match"]]
+  verify-key: proc [secret /in /out] [either in = secret [out 1 done 1] [throw "key and secret does not match"]]
 
   user-auth: fn [auth] [
     x: split auth " "
