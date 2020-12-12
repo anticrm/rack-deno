@@ -27,7 +27,7 @@ export function parse(s: string, pos: number = 0): any[] {
   function readIdent (): string {
     let ident = ''
 
-    while (i < s.length && ' \n[](){}:;/'.indexOf(s.charAt(i)) === -1) {
+    while (i < s.length && ' \n\r[](){}:;/'.indexOf(s.charAt(i)) === -1) {
       ident += s.charAt(i)
       i++
     }
@@ -42,6 +42,7 @@ export function parse(s: string, pos: number = 0): any[] {
     switch (s.charAt(i)) {
       case ' ':
       case '\n':
+      case '\r':
           i++
         break
       case ']':
