@@ -18,6 +18,7 @@ import { parse } from './parse.ts'
 import { Publisher, Subscription, Suspend, Subscriber } from './async.ts'
 
 import { Base64 } from "https://deno.land/x/bb64/mod.ts"
+import {importModule} from "./import.ts";
 
 function createProc(_default: (pc: PC) => any): Proc & ProcFunctions {
   return { __params: 5, default: _default} as unknown as Proc & ProcFunctions
@@ -277,14 +278,13 @@ function createModule() {
       }  
     },
 
-    // async importJsModule (this: Context, url: string): Promise<any> {
-    //   const u = new URL(url, this.vm.url)
-    //   const mod = await import(u.toString())
-    //   if (mod['run']) {
-    //     mod.run(this.vm)
-    //   }
-    //   return mod
-    // },
+    import (this: Context, id: string, url: string): Suspend {
+      const out = new Publisher()
+      return {
+        resume: async () => importModule(this.vm, id, new URL(url, new URL('..', import.meta.url))).then(mod => out.done(mod)),
+        out
+      }
+    },
 
     // async module (this: Context, desc: Code, code: Code): Promise<any> {
     //   //this.vm.bind(code)  
@@ -350,6 +350,8 @@ split: native [string delim] :core/split
 
 base: native [string] :core/base
 debase: native [string] :core/debase
+
+import: native [id url] :core/import
 `
 
 export default function (vm: VM) {
