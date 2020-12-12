@@ -39,9 +39,11 @@ export default async () => {
           bindDictionary(query, dict)
           this.vm.exec(query)
           const result = await db.collection(collection).findOne(dict)
-          if (result)
+          if (result) {
             out.write(result)
-          out.done(result)
+            console.log('read', result)
+          }
+          out.done(!!result)
         },
         out
       }
@@ -54,6 +56,7 @@ export default async () => {
           const dict = {} as { [key: string]: string }
           bindDictionary(data, dict)
           this.vm.exec(data)
+          console.log('writing', dict)
           const result = await db.collection(collection).insert(dict)
           out.write(result)
           out.done(result)
