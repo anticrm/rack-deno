@@ -44,6 +44,15 @@ export class Publisher<T> {
       this.completeResult = res
     }
   }
+
+  error (err: Error) {
+    if (this.subscriber) {
+      this.subscriber.onError(err)
+    } else {
+      console.log('not implemented')
+      throw new Error('not implemented')
+    }
+  }
 }
 
 export interface Subscriber<T> {

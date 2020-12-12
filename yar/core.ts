@@ -138,6 +138,12 @@ function createModule() {
               set: (sym: string, value: any) => { throw new Error('done is read only') }
             }
           }
+          if (sym === 'err') {
+            return {
+              get: (sym: string): any => createProc((pc: PC): any => out.error(new Error(pc.next()))),
+              set: (sym: string, value: any) => { throw new Error('done is read only') }
+            }
+          }
           if (offsets[sym] !== undefined) {
             return {
               get: (sym: string): any => stack[offsets[sym]],

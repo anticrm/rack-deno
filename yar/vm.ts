@@ -243,12 +243,7 @@ export class VM {
   }
 
   exec(code: Code): any {
-    try {
-      return new PC(this, code).exec()
-    } catch (err) {
-      console.log('exec exception: ' + err)
-      throw err
-    }
+    return new PC(this, code).exec()
   }
 
 }
@@ -338,7 +333,9 @@ export async function asyncResult(result: any): Promise<any> {
           out.push(t)
         },
         onSubscribe(s: Subscription): void {},
-        onError(e: Error): void {},
+        onError(e: Error): void {
+          reject(e)
+        },
         onComplete(res: any): void {
           if (out.length === 0) {
             resolve(res)

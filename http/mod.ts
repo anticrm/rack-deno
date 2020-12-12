@@ -26,11 +26,10 @@ export default async () => {
 
   const extractFactory: { [key: string]: undefined | ((item: CodeItem, pc: PC) => Extractor) } = {
     query: (word: CodeItem) => async (request: ServerRequest) => new Const(new URL(request.url, base).searchParams.get((word as Word).sym)),
-    auth: (codeItem: CodeItem, pc: PC) => { 
+    auth: (codeItem: CodeItem, pc: PC) => {
       const vm = pc.vm
       const auth = codeItem.exec(pc)
       const authFunc = (typeof auth === 'function' ? auth : auth.default)
-      console.log('auth', authFunc)
       return async (request: ServerRequest) => {
         const authHeader = request.headers.get('authorization')
         if (!authHeader) {
@@ -40,7 +39,6 @@ export default async () => {
         const pc = new PC(vm, code)
 
         const result = authFunc(pc)
-        // result.resume.then((res: any) => console.log('RESUME', res)).catch((err: Error) => console.log('ERR', err))
         const ar = await asyncResult(result)
         return new Const(ar)
       }
@@ -79,12 +77,6 @@ export default async () => {
     const launch = async (request: ServerRequest): Promise<any> => {
       const code = await Promise.all(extractors.map(extractor => extractor(request)))
       const pc = new PC(this.vm, code)
-      // if (authFunc !== undefined) {
-      //   const authHeader = request.headers.get('authorization')
-      //   const code = [new Const(authHeader)]
-      //   const pc = new PC(this.vm, code)
-      //   const auth = await asyncResult(authFunc(pc))
-      // }
       return procFunc(pc)
     }
   
@@ -105,7 +97,6 @@ export default async () => {
                 request.respond({ status: 200, body: result.toString() })
               }
             } catch (err) {
-              console.log(err)
               if (err instanceof CoreError) {
                 const coreError = err as CoreError
                 request.respond({ status: coreError.getCode(), body: err.toString() })

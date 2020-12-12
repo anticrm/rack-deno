@@ -36,11 +36,12 @@ async function main() {
         const values = code.split(' ')
         password = values[1]
       } else {
-        const response = await fetch('http://' + server + ':8086/do?do=' + encodeURIComponent(code), {
-          headers: {
-            'authorization': 'Basic ' + Base64.fromString(user + ':' + password).toString()
-          }
-        })
+        const response = await fetch('http://' + server + ':8086/do?do=' + encodeURIComponent(code),
+          user && password ?
+            {
+              headers: { 'authorization': 'Basic ' + Base64.fromString(user + ':' + password).toString() }
+            } : {}
+        )
         console.log(response.status + ' ' + response.statusText)
         console.log(await response.text())
       }
