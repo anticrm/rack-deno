@@ -17,6 +17,16 @@ import { VM, bindDictionary, bindDictionaryWords } from './vm.ts'
 import { parse } from './parse.ts'
 
 export async function importModule(vm: VM, id: string, url: URL): Promise<any> {
+  const module = vm.modules.get(url.toString())
+  if (module) return module
+  else {
+    const module = doImportModule(vm, id, url)
+    vm.modules.set(url.toString(), module)
+    return module
+  }
+}
+
+async function doImportModule(vm: VM, id: string, url: URL): Promise<any> {
   console.log('loading module ' + url.toString() + '...')
   // vm.url = url
   let text: string

@@ -231,7 +231,7 @@ export class VM {
   dictionary: Dict = {}
   stack: any[] = []
   result: any
-  // url?: URL
+  modules = new Map<string, Promise<any>>()
 
   bind(code: Code) {
     bind(code, () => {
